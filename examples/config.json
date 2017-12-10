@@ -1,0 +1,18 @@
+{
+  "basic_auth_username": "username",
+  "basic_auth_password": "password",
+  "services": [{
+    "id": "uuid-1",
+    "name": "postgres",
+    "description": "RDS Postgres instance",
+    "bindable": true,
+    "requires": [],
+    "metadata": {},
+    "plans": [{
+      "id": "uuid-2",
+      "name": "small",
+      "description": "1GB Storage / 102MB RAM at $35.00/month.",
+      "metadata": {}
+    }]
+  }]
+}
