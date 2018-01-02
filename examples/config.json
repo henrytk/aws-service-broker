@@ -1,6 +1,9 @@
 {
   "basic_auth_username": "username",
   "basic_auth_password": "password",
+  "provider": {
+    "region": "eu-west-1"
+  },
   "services": [{
     "id": "uuid-1",
     "name": "postgres",
