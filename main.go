@@ -36,7 +36,7 @@ func main() {
 	}
 
 	logger := lager.NewLogger("aws-service-broker")
-	logger.RegisterSink(lager.NewWriterSink(os.Stdout, config.API.LagerLogLevel()))
+	logger.RegisterSink(lager.NewWriterSink(os.Stdout, config.API.LagerLogLevel))
 
 	serviceBroker := broker.New(config, awsProvider, logger)
 	server := broker.NewAPI(serviceBroker, logger, config)

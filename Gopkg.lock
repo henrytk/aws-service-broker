@@ -34,8 +34,8 @@
 [[projects]]
   branch = "master"
   name = "github.com/henrytk/universal-service-broker"
-  packages = ["broker","provider","provider/fakes"]
-  revision = "91087169ff45347258dcf3fef8f4969fd8b7b929"
+  packages = ["broker","provider"]
+  revision = "afbfd293452016ebfcc920c19936c33cf0cbe876"
 
 [[projects]]
   name = "github.com/jmespath/go-jmespath"
@@ -93,6 +93,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "85aebfcae25760cfe557e623791d30d84b40c06138b91ffabd4e521edb7b4281"
+  inputs-digest = "cb518c74e15f3d6b8cb83f5cea593617cab91c8797a8407afac8817679dcdd5e"
   solver-name = "gps-cdcl"
   solver-version = 1
