@@ -45,9 +45,9 @@ type MongoDBPlanParameters struct {
 	NodeInstanceType       string `json:"node_instance_type"`
 }
 
-func DecodeConfig(rawMessage json.RawMessage) (Config, error) {
+func DecodeConfig(b []byte) (Config, error) {
 	var config Config
-	err := json.Unmarshal([]byte(rawMessage), &config)
+	err := json.Unmarshal(b, &config)
 	if err != nil {
 		return config, err
 	}

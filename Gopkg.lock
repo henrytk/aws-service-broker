@@ -35,7 +35,7 @@
   branch = "master"
   name = "github.com/henrytk/universal-service-broker"
   packages = ["broker","provider","provider/fakes"]
-  revision = "295387b749c9d6715c7c58033c9a9f61af437d7e"
+  revision = "91087169ff45347258dcf3fef8f4969fd8b7b929"
 
 [[projects]]
   name = "github.com/jmespath/go-jmespath"
