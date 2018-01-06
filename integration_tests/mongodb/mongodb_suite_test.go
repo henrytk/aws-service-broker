@@ -46,6 +46,6 @@ func TestMongodb(t *testing.T) {
 
 func assertEnvVar(parameter *string, key string) {
 	*parameter, ok = os.LookupEnv(key)
-	Expect(ok).To(BeTrue())
+	Expect(ok).To(BeTrue(), "key "+key+" not set")
 	Expect(*parameter).NotTo(BeEmpty(), "for key "+key)
 }
