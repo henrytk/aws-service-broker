@@ -9,7 +9,12 @@ import (
 )
 
 type Config struct {
-	Catalog Catalog `json:"catalog"`
+	AWSConfig AWSConfig `json:"aws_config"`
+	Catalog   Catalog   `json:"catalog"`
+}
+
+type AWSConfig struct {
+	Region string `json:"region"`
 }
 
 type Catalog struct {
@@ -50,6 +55,9 @@ func DecodeConfig(b []byte) (Config, error) {
 	err := json.Unmarshal(b, &config)
 	if err != nil {
 		return config, err
+	}
+	if config.AWSConfig.Region == "" {
+		return config, errors.New("Config error: must provide AWS region")
 	}
 	if reflect.DeepEqual(config.Catalog, Catalog{}) {
 		return config, errors.New("Config error: no catalog found")

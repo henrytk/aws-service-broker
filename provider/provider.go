@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 
+	"github.com/henrytk/aws-service-broker/aws/cloudformation/mongodb"
 	usbProvider "github.com/henrytk/universal-service-broker/provider"
 	"github.com/pivotal-cf/brokerapi"
 )
 
 type AWSProvider struct {
-	Config *Config
+	Config         *Config
+	MongoDBService mongodb.Service
 }
 
 func NewAWSProvider(rawConfig []byte) (AWSProvider, error) {
@@ -17,8 +19,13 @@ func NewAWSProvider(rawConfig []byte) (AWSProvider, error) {
 	if err != nil {
 		return AWSProvider{}, err
 	}
+	mongoDBService, err := mongodb.NewService(config.AWSConfig.Region)
+	if err != nil {
+		return AWSProvider{}, err
+	}
 	return AWSProvider{
-		Config: &config,
+		Config:         &config,
+		MongoDBService: mongoDBService,
 	}, nil
 }
 

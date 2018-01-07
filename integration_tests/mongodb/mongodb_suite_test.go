@@ -14,7 +14,7 @@ import (
 
 var (
 	region                 = "eu-west-1"
-	mongoDBService         mongodb.MongoDBService
+	mongoDBService         mongodb.Service
 	err                    error
 	id                     string
 	ok                     bool
@@ -29,7 +29,7 @@ var (
 
 func TestMongodb(t *testing.T) {
 	BeforeSuite(func() {
-		mongoDBService, err = mongodb.NewMongoDBService(region)
+		mongoDBService, err = mongodb.NewService(region)
 		Expect(err).NotTo(HaveOccurred())
 		id = "test" + strings.Replace(uuid.NewV4().String(), "-", "", -1)
 		assertEnvVar(&keyPairName, "ASB_KEY_PAIR")

@@ -23,7 +23,7 @@ var (
 	bastionSecurityGroupIdSPK StackParameterKey = "BastionSecurityGroupID"
 )
 
-func (m MongoDBService) CreateStack(
+func (s Service) CreateStack(
 	id,
 	keyPairName,
 	primaryNodeSubnetId,
@@ -43,7 +43,7 @@ func (m MongoDBService) CreateStack(
 		bastionSecurityGroupId,
 	)
 	createStackInput := BuildCreateStackInput(id, parameters)
-	return m.Client.CreateStack(&createStackInput)
+	return s.Client.CreateStack(&createStackInput)
 }
 
 func buildParameters(

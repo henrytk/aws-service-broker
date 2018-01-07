@@ -5,16 +5,16 @@ import (
 	"github.com/henrytk/aws-service-broker/aws/cloudformation"
 )
 
-type MongoDBService struct {
+type Service struct {
 	Client cloudformationiface.CloudFormationAPI
 }
 
-func NewMongoDBService(region string) (MongoDBService, error) {
+func NewService(region string) (Service, error) {
 	client, err := cloudformation.NewCloudFormationClient(region)
 	if err != nil {
-		return MongoDBService{}, err
+		return Service{}, err
 	}
-	return MongoDBService{
+	return Service{
 		Client: client,
 	}, nil
 }

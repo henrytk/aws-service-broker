@@ -2,7 +2,7 @@
         "basic_auth_username": "username",
         "basic_auth_password": "password",
         "log_level": "info",
-        "provider": {
+        "aws_config": {
                 "region": "eu-west-1"
         },
         "catalog": {

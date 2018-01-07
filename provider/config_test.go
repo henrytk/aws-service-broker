@@ -16,7 +16,9 @@ var _ = Describe("Config", func() {
 
 	Context("when there is no Catalog defined", func() {
 		It("returns an error", func() {
-			rawConfig = json.RawMessage(`{}`)
+			rawConfig = json.RawMessage(`{
+				"aws_config": {"region": "eu-west-1"}
+			}`)
 			_, err := DecodeConfig(rawConfig)
 			Expect(err).To(MatchError("Config error: no catalog found"))
 		})
@@ -26,6 +28,7 @@ var _ = Describe("Config", func() {
 		It("returns an error", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": []
 					}
@@ -40,6 +43,7 @@ var _ = Describe("Config", func() {
 		It("returns an error", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
 							{
@@ -58,6 +62,7 @@ var _ = Describe("Config", func() {
 		It("returns an error", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
 							{
@@ -83,6 +88,7 @@ var _ = Describe("Config", func() {
 		It("decodes both catalog data and provider-specific data into one structure", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
 							{
@@ -113,6 +119,7 @@ var _ = Describe("Config", func() {
 			`)
 			config, err := DecodeConfig(rawConfig)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(config.AWSConfig.Region).To(Equal("eu-west-1"))
 			Expect(len(config.Catalog.Services)).To(Equal(1))
 			service := config.Catalog.Services[0]
 			Expect(service.Description).To(Equal("MongoDB clusters"))
@@ -128,9 +135,23 @@ var _ = Describe("Config", func() {
 	})
 
 	Describe("Mandatory parameters", func() {
+		It("returns an error if AWS region is empty", func() {
+			rawConfig = json.RawMessage(`
+				{
+					"aws_config": {"region": ""},
+					"catalog": {
+						"services": []
+					}
+				}
+			`)
+			_, err := DecodeConfig(rawConfig)
+			Expect(err).To(MatchError("Config error: must provide AWS region"))
+		})
+
 		It("returns an error if bastion security group ID is empty", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
 							{
@@ -155,6 +176,7 @@ var _ = Describe("Config", func() {
 		It("returns an error if key pair name is empty", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
 							{
@@ -179,6 +201,7 @@ var _ = Describe("Config", func() {
 		It("returns an error if VPC ID is empty", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
 							{
@@ -203,6 +226,7 @@ var _ = Describe("Config", func() {
 		It("returns an error if primary node subnet ID is empty", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
 							{
@@ -227,6 +251,7 @@ var _ = Describe("Config", func() {
 		It("returns an error if secondary node 0 subnet ID is empty", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
 							{
@@ -251,6 +276,7 @@ var _ = Describe("Config", func() {
 		It("returns an error if secondary node 1 subnet ID is empty", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
 							{

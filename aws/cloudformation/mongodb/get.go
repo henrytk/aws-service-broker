@@ -8,8 +8,8 @@ import (
 	awscf "github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
-func (m MongoDBService) GetStackState(stackName string) (string, string, error) {
-	describeStacksOutput, err := m.Client.DescribeStacks(&awscf.DescribeStacksInput{
+func (s Service) GetStackState(stackName string) (string, string, error) {
+	describeStacksOutput, err := s.Client.DescribeStacks(&awscf.DescribeStacksInput{
 		StackName: aws.String(stackName),
 	})
 	if err != nil {
@@ -28,8 +28,8 @@ func (m MongoDBService) GetStackState(stackName string) (string, string, error) 
 	return *stack.StackStatus, reason, nil
 }
 
-func (m MongoDBService) CreateStackCompleted(stackName string) (bool, error) {
-	state, reason, err := m.GetStackState(stackName)
+func (s Service) CreateStackCompleted(stackName string) (bool, error) {
+	state, reason, err := s.GetStackState(stackName)
 	if err != nil {
 		return false, err
 	}
@@ -42,8 +42,8 @@ func (m MongoDBService) CreateStackCompleted(stackName string) (bool, error) {
 	return false, nil
 }
 
-func (m MongoDBService) DeleteStackCompleted(stackName string) (bool, error) {
-	state, reason, err := m.GetStackState(stackName)
+func (s Service) DeleteStackCompleted(stackName string) (bool, error) {
+	state, reason, err := s.GetStackState(stackName)
 	if err != nil {
 		if strings.Contains(err.Error(), "Stack with id "+stackName+" does not exist") {
 			return true, nil

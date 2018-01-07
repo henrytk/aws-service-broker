@@ -25,12 +25,12 @@ var _ = Describe("Mongodb", func() {
 	Describe("Getting stack information", func() {
 		var (
 			fakeCloudFormationAPI *fakes.FakeCloudFormationAPI
-			mongoDBService        MongoDBService
+			mongoDBService        Service
 		)
 
 		BeforeEach(func() {
 			fakeCloudFormationAPI = &fakes.FakeCloudFormationAPI{}
-			mongoDBService = MongoDBService{Client: fakeCloudFormationAPI}
+			mongoDBService = Service{Client: fakeCloudFormationAPI}
 		})
 
 		Describe("GetStackState", func() {
