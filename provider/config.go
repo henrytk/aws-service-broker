@@ -30,10 +30,10 @@ type Plan struct {
 type MongoDBServiceParameters struct {
 	BastionSecurityGroupId string `json:"bastion_security_group_id"`
 	KeyPairName            string `json:"key_pair_name"`
-	VPC                    string `json:"vpc_id"`
-	PrimaryNodeSubnet      string `json:"primary_node_subnet_id"`
-	Secondary0NodeSubnet   string `json:"secondary_0_node_subnet_id"`
-	Secondary1NodeSubnet   string `json:"secondary_1_node_subnet_id"`
+	VpcId                  string `json:"vpc_id"`
+	PrimaryNodeSubnetId    string `json:"primary_node_subnet_id"`
+	Secondary0NodeSubnetId string `json:"secondary_0_node_subnet_id"`
+	Secondary1NodeSubnetId string `json:"secondary_1_node_subnet_id"`
 }
 
 type MongoDBPlanParameters struct {
@@ -61,6 +61,24 @@ func DecodeConfig(b []byte) (Config, error) {
 	for _, service := range config.Catalog.Services {
 		switch service.Name {
 		case "mongodb":
+			if service.BastionSecurityGroupId == "" {
+				return config, errors.New("Error decoding config: must provide bastion security group ID")
+			}
+			if service.KeyPairName == "" {
+				return config, errors.New("Error decoding config: must provide key pair name")
+			}
+			if service.VpcId == "" {
+				return config, errors.New("Error decoding config: must provide VPC ID")
+			}
+			if service.PrimaryNodeSubnetId == "" {
+				return config, errors.New("Error decoding config: must provide primary node subnet ID")
+			}
+			if service.Secondary0NodeSubnetId == "" {
+				return config, errors.New("Error decoding config: must provide secondary 0 node subnet ID")
+			}
+			if service.Secondary1NodeSubnetId == "" {
+				return config, errors.New("Error decoding config: must provide secondary 1 node subnet ID")
+			}
 		default:
 			return config, errors.New("Error decoding config: service name " + service.Name + " not recognised")
 		}

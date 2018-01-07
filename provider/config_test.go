@@ -15,18 +15,15 @@ var _ = Describe("Config", func() {
 	)
 
 	Context("when there is no Catalog defined", func() {
-		BeforeEach(func() {
-			rawConfig = json.RawMessage(`{}`)
-		})
-
 		It("returns an error", func() {
+			rawConfig = json.RawMessage(`{}`)
 			_, err := DecodeConfig(rawConfig)
 			Expect(err).To(MatchError("Error decoding config: no catalog found"))
 		})
 	})
 
 	Context("when there are no services configured", func() {
-		BeforeEach(func() {
+		It("returns an error", func() {
 			rawConfig = json.RawMessage(`
 				{
 					"catalog": {
@@ -34,16 +31,13 @@ var _ = Describe("Config", func() {
 					}
 				}
 			`)
-		})
-
-		It("returns an error", func() {
 			_, err := DecodeConfig(rawConfig)
 			Expect(err).To(MatchError("Error decoding config: at least one service must be configured"))
 		})
 	})
 
 	Context("when the service name is not recognised", func() {
-		BeforeEach(func() {
+		It("returns an error", func() {
 			rawConfig = json.RawMessage(`
 				{
 					"catalog": {
@@ -55,38 +49,38 @@ var _ = Describe("Config", func() {
 					}
 				}
 			`)
-		})
-
-		It("returns an error", func() {
 			_, err := DecodeConfig(rawConfig)
 			Expect(err).To(MatchError("Error decoding config: service name mangoDB not recognised"))
 		})
 	})
 
 	Context("when a service has no plans", func() {
-		BeforeEach(func() {
+		It("returns an error", func() {
 			rawConfig = json.RawMessage(`
 				{
 					"catalog": {
 						"services": [
 							{
 								"name": "mongodb",
+								"bastion_security_group_id": "irrelevant",
+								"key_pair_name": "key_pair_name",
+								"vpc_id": "irrelevant",
+								"primary_node_subnet_id": "irrelevant",
+								"secondary_0_node_subnet_id": "irrelevant",
+								"secondary_1_node_subnet_id": "irrelevant",
 								"plans": []
 							}
 						]
 					}
 				}
 			`)
-		})
-
-		It("returns an error", func() {
 			_, err := DecodeConfig(rawConfig)
 			Expect(err).To(MatchError("Error decoding config: at least one plan must be configured for service mongodb"))
 		})
 	})
 
 	Context("when given valid config", func() {
-		BeforeEach(func() {
+		It("decodes both catalog data and provider-specific data into one structure", func() {
 			rawConfig = json.RawMessage(`
 				{
 					"catalog": {
@@ -117,9 +111,6 @@ var _ = Describe("Config", func() {
 					}
 				}
 			`)
-		})
-
-		It("decodes both catalog data and provider-specific data into one structure", func() {
 			config, err := DecodeConfig(rawConfig)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(config.Catalog.Services)).To(Equal(1))
@@ -133,6 +124,152 @@ var _ = Describe("Config", func() {
 			plan2 := service.Plans[1]
 			Expect(plan2.Description).To(Equal("Replica set of 3"))
 			Expect(plan2.ClusterReplicaSetCount).To(Equal("3"))
+		})
+	})
+
+	Describe("Mandatory parameters", func() {
+		It("returns an error if bastion security group ID is empty", func() {
+			rawConfig = json.RawMessage(`
+				{
+					"catalog": {
+						"services": [
+							{
+								"name": "mongodb",
+								"description": "MongoDB clusters",
+								"bastion_security_group_id": "",
+								"key_pair_name": "non-empty",
+								"vpc_id": "non-empty",
+								"primary_node_subnet_id": "non-empty",
+								"secondary_0_node_subnet_id": "non-empty",
+								"secondary_1_node_subnet_id": "non-empty",
+								"plans": []
+							}
+						]
+					}
+				}
+			`)
+			_, err := DecodeConfig(rawConfig)
+			Expect(err).To(MatchError("Error decoding config: must provide bastion security group ID"))
+		})
+
+		It("returns an error if key pair name is empty", func() {
+			rawConfig = json.RawMessage(`
+				{
+					"catalog": {
+						"services": [
+							{
+								"name": "mongodb",
+								"description": "MongoDB clusters",
+								"bastion_security_group_id": "non-empty",
+								"key_pair_name": "",
+								"vpc_id": "non-empty",
+								"primary_node_subnet_id": "non-empty",
+								"secondary_0_node_subnet_id": "non-empty",
+								"secondary_1_node_subnet_id": "non-empty",
+								"plans": []
+							}
+						]
+					}
+				}
+			`)
+			_, err := DecodeConfig(rawConfig)
+			Expect(err).To(MatchError("Error decoding config: must provide key pair name"))
+		})
+
+		It("returns an error if VPC ID is empty", func() {
+			rawConfig = json.RawMessage(`
+				{
+					"catalog": {
+						"services": [
+							{
+								"name": "mongodb",
+								"description": "MongoDB clusters",
+								"bastion_security_group_id": "non-empty",
+								"key_pair_name": "non-empty",
+								"vpc_id": "",
+								"primary_node_subnet_id": "non-empty",
+								"secondary_0_node_subnet_id": "non-empty",
+								"secondary_1_node_subnet_id": "non-empty",
+								"plans": []
+							}
+						]
+					}
+				}
+			`)
+			_, err := DecodeConfig(rawConfig)
+			Expect(err).To(MatchError("Error decoding config: must provide VPC ID"))
+		})
+
+		It("returns an error if primary node subnet ID is empty", func() {
+			rawConfig = json.RawMessage(`
+				{
+					"catalog": {
+						"services": [
+							{
+								"name": "mongodb",
+								"description": "MongoDB clusters",
+								"bastion_security_group_id": "non-empty",
+								"key_pair_name": "non-empty",
+								"vpc_id": "non-empty",
+								"primary_node_subnet_id": "",
+								"secondary_0_node_subnet_id": "non-empty",
+								"secondary_1_node_subnet_id": "non-empty",
+								"plans": []
+							}
+						]
+					}
+				}
+			`)
+			_, err := DecodeConfig(rawConfig)
+			Expect(err).To(MatchError("Error decoding config: must provide primary node subnet ID"))
+		})
+
+		It("returns an error if secondary node 0 subnet ID is empty", func() {
+			rawConfig = json.RawMessage(`
+				{
+					"catalog": {
+						"services": [
+							{
+								"name": "mongodb",
+								"description": "MongoDB clusters",
+								"bastion_security_group_id": "non-empty",
+								"key_pair_name": "non-empty",
+								"vpc_id": "non-empty",
+								"primary_node_subnet_id": "non-empty",
+								"secondary_0_node_subnet_id": "",
+								"secondary_1_node_subnet_id": "non-empty",
+								"plans": []
+							}
+						]
+					}
+				}
+			`)
+			_, err := DecodeConfig(rawConfig)
+			Expect(err).To(MatchError("Error decoding config: must provide secondary 0 node subnet ID"))
+		})
+
+		It("returns an error if secondary node 1 subnet ID is empty", func() {
+			rawConfig = json.RawMessage(`
+				{
+					"catalog": {
+						"services": [
+							{
+								"name": "mongodb",
+								"description": "MongoDB clusters",
+								"bastion_security_group_id": "non-empty",
+								"key_pair_name": "non-empty",
+								"vpc_id": "non-empty",
+								"primary_node_subnet_id": "non-empty",
+								"secondary_0_node_subnet_id": "non-empty",
+								"secondary_1_node_subnet_id": "",
+								"plans": []
+							}
+						]
+					}
+				}
+			`)
+			_, err := DecodeConfig(rawConfig)
+			Expect(err).To(MatchError("Error decoding config: must provide secondary 1 node subnet ID"))
 		})
 	})
 })
