@@ -28,7 +28,8 @@ func (s Service) GetStackState(stackName string) (string, string, error) {
 	return *stack.StackStatus, reason, nil
 }
 
-func (s Service) CreateStackCompleted(stackName string) (bool, error) {
+func (s Service) CreateStackCompleted(id string) (bool, error) {
+	stackName := s.GenerateStackName(id)
 	state, reason, err := s.GetStackState(stackName)
 	if err != nil {
 		return false, err
@@ -42,7 +43,8 @@ func (s Service) CreateStackCompleted(stackName string) (bool, error) {
 	return false, nil
 }
 
-func (s Service) DeleteStackCompleted(stackName string) (bool, error) {
+func (s Service) DeleteStackCompleted(id string) (bool, error) {
+	stackName := s.GenerateStackName(id)
 	state, reason, err := s.GetStackState(stackName)
 	if err != nil {
 		if strings.Contains(err.Error(), "Stack with id "+stackName+" does not exist") {

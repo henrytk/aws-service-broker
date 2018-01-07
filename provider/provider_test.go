@@ -76,7 +76,7 @@ var _ = Describe("Provider", func() {
 				Service: brokerapi.Service{ID: "this-cannot-be-found"},
 			}
 			_, _, err := awsProvider.Provision(context.Background(), provisionData)
-			Expect(err).To(MatchError("Error: could not find service ID: this-cannot-be-found"))
+			Expect(err).To(MatchError("could not find service ID: this-cannot-be-found"))
 		})
 		It("returns an error when it can't find the plan", func() {
 			provisionData := usbProvider.ProvisionData{
@@ -84,7 +84,7 @@ var _ = Describe("Provider", func() {
 				Plan:    brokerapi.ServicePlan{ID: "this-cannot-be-found"},
 			}
 			_, _, err := awsProvider.Provision(context.Background(), provisionData)
-			Expect(err).To(MatchError("Error: could not find plan ID: this-cannot-be-found"))
+			Expect(err).To(MatchError("could not find plan ID: this-cannot-be-found"))
 		})
 	})
 })

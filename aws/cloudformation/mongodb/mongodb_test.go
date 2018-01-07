@@ -13,26 +13,75 @@ import (
 )
 
 var _ = Describe("Mongodb", func() {
+	var (
+		fakeCloudFormationAPI *fakes.FakeCloudFormationAPI
+		mongoDBService        Service
+	)
+
+	BeforeEach(func() {
+		fakeCloudFormationAPI = &fakes.FakeCloudFormationAPI{}
+		mongoDBService = Service{Client: fakeCloudFormationAPI}
+	})
+
+	Describe("BuildParameters", func() {
+		Describe("Mandatory parameters", func() {
+			It("returns an error if bastion security group ID is empty", func() {
+				_, err := mongoDBService.BuildParameters(InputParameters{"password", "", "keyPairName", "vpcId", "primary",
+					"secondary0", "secondary1", "", "", "", "", "", "", ""})
+				Expect(err).To(MatchError("Error building MongoDB parameters: bastion security group ID is empty"))
+			})
+
+			It("returns an error if key pair name is empty", func() {
+				_, err := mongoDBService.BuildParameters(InputParameters{"password", "bastion", "", "vpcId", "primary",
+					"secondary0", "secondary1", "", "", "", "", "", "", ""})
+				Expect(err).To(MatchError("Error building MongoDB parameters: key pair name is empty"))
+			})
+
+			It("returns an error if VPC ID is empty", func() {
+				_, err := mongoDBService.BuildParameters(InputParameters{"password", "bastion", "keyPairName", "", "primary",
+					"secondary0", "secondary1", "", "", "", "", "", "", ""})
+				Expect(err).To(MatchError("Error building MongoDB parameters: VPC ID is empty"))
+			})
+
+			It("returns an error if primary node subnet ID is empty", func() {
+				_, err := mongoDBService.BuildParameters(InputParameters{"password", "bastion", "keyPairName", "vpcId", "",
+					"secondary0", "secondary1", "", "", "", "", "", "", ""})
+				Expect(err).To(MatchError("Error building MongoDB parameters: primary node subnet ID is empty"))
+			})
+
+			It("returns an error if secondary 0 node subnet ID is empty", func() {
+				_, err := mongoDBService.BuildParameters(InputParameters{"password", "bastion", "keyPairName", "vpcId", "primary",
+					"", "secondary1", "", "", "", "", "", "", ""})
+				Expect(err).To(MatchError("Error building MongoDB parameters: secondary 0 node subnet ID is empty"))
+			})
+
+			It("returns an error if secondary 1 node subnet ID is empty", func() {
+				_, err := mongoDBService.BuildParameters(InputParameters{"password", "bastion", "keyPairName", "vpcId", "primary",
+					"secondary0", "", "", "", "", "", "", "", ""})
+				Expect(err).To(MatchError("Error building MongoDB parameters: secondary 1 node subnet ID is empty"))
+			})
+		})
+
+		Describe("Parameters with default values", func() {
+			It("Adds all six optional parameters if non-empty", func() {
+				parameters, err := mongoDBService.BuildParameters(InputParameters{"password", "bastion", "keyPairName", "vpcId", "primary",
+					"secondary0", "secondary1", "3.2", "1", "1", "500", "io1", "200", "m4.xlarge"})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(parameters)).To(Equal(14))
+			})
+		})
+	})
+
 	Describe("Stack Creation", func() {
 		It("should build valid input", func() {
 			var parameters []*awscf.Parameter
-			createStackInput := BuildCreateStackInput("some-unique-id", parameters)
+			createStackInput := mongoDBService.BuildCreateStackInput("some-unique-id", parameters)
 			err := createStackInput.Validate()
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
 	Describe("Getting stack information", func() {
-		var (
-			fakeCloudFormationAPI *fakes.FakeCloudFormationAPI
-			mongoDBService        Service
-		)
-
-		BeforeEach(func() {
-			fakeCloudFormationAPI = &fakes.FakeCloudFormationAPI{}
-			mongoDBService = Service{Client: fakeCloudFormationAPI}
-		})
-
 		Describe("GetStackState", func() {
 			Context("when stack has been created successfully", func() {
 				It("returns the state with no error", func() {
@@ -181,7 +230,7 @@ var _ = Describe("Mongodb", func() {
 						fakeCloudFormationAPI.DescribeStacksReturns(
 							&awscf.DescribeStacksOutput{
 								Stacks: []*awscf.Stack{},
-							}, errors.New("ValidationError: Stack with id irrelevant does not exist"),
+							}, errors.New("ValidationError: Stack with id "+mongoDBService.GenerateStackName("irrelevant")+" does not exist"),
 						)
 						completed, err := mongoDBService.DeleteStackCompleted("irrelevant")
 						Expect(err).NotTo(HaveOccurred())

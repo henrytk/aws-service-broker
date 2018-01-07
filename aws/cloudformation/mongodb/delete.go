@@ -8,7 +8,7 @@ import (
 func (s Service) DeleteStack(id string) error {
 	_, err := s.Client.DeleteStack(&awscf.DeleteStackInput{
 		ClientRequestToken: aws.String("delete-" + id),
-		StackName:          aws.String(id),
+		StackName:          aws.String(s.GenerateStackName(id)),
 	})
 	return err
 }

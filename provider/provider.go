@@ -29,20 +29,51 @@ func NewAWSProvider(rawConfig []byte) (AWSProvider, error) {
 	}, nil
 }
 
+type OperationData struct {
+	Type string
+}
+
 func (ap AWSProvider) Provision(ctx context.Context, provisionData usbProvider.ProvisionData) (
-	dashboardURL, operationData string, err error,
+	dashboardURL string, operationData string, err error,
 ) {
 	service, err := findServiceById(provisionData.Service.ID, &ap.Config.Catalog)
 	if err != nil {
-		return "", "", errors.New("Error: could not find service ID: " + provisionData.Service.ID)
+		return "", "", errors.New("could not find service ID: " + provisionData.Service.ID)
 	}
 
-	_, err = findPlanById(provisionData.Plan.ID, service)
+	plan, err := findPlanById(provisionData.Plan.ID, service)
 	if err != nil {
-		return "", "", errors.New("Error: could not find plan ID: " + provisionData.Plan.ID)
+		return "", "", errors.New("could not find plan ID: " + provisionData.Plan.ID)
 	}
 
-	return "", "", errors.New("Error: not implemented")
+	switch service.Name {
+	case "mongodb":
+		_, err = ap.MongoDBService.CreateStack(
+			provisionData.InstanceID,
+			mongodb.InputParameters{
+				ap.MongoDBService.GenerateAdminPassword("irrelevant"),
+				service.BastionSecurityGroupId,
+				service.KeyPairName,
+				service.VpcId,
+				service.PrimaryNodeSubnetId,
+				service.Secondary0NodeSubnetId,
+				service.Secondary1NodeSubnetId,
+				plan.MongoDBVersion,
+				plan.ClusterReplicaSetCount,
+				plan.ReplicaShardIndex,
+				plan.VolumeSize,
+				plan.VolumeType,
+				plan.Iops,
+				plan.NodeInstanceType,
+			},
+		)
+		if err != nil {
+			return "", "", err
+		}
+		return "", "", errors.New("not implemented")
+	default:
+		return "", "", errors.New("no provider for service name " + service.Name)
+	}
 }
 
 func (ap AWSProvider) Deprovision(context.Context, usbProvider.DeprovisionData) (

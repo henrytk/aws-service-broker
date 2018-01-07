@@ -1,107 +1,202 @@
 package mongodb
 
 import (
+	"errors"
+
 	"github.com/aws/aws-sdk-go/aws"
 	awscf "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/henrytk/aws-service-broker/aws/cloudformation/templates"
 )
 
+var (
+	timeoutInMinutes int64 = 15
+	capabilities           = []*string{aws.String("CAPABILITY_IAM")}
+)
+
 type StackParameterKey string
 
 var (
-	timeoutInMinutes int64 = 15
-
-	capabilities = []*string{aws.String("CAPABILITY_IAM")}
-
 	usePreviousValue                            = false
+	bastionSecurityGroupIdSPK StackParameterKey = "BastionSecurityGroupID"
+	clusterReplicaSetCountSPK StackParameterKey = "ClusterReplicaSetCount"
+	mongoDBVersionSPK         StackParameterKey = "MongoDBVersion"
+	mongoDBAdminUsernameSPK   StackParameterKey = "MongoDBAdminUsername"
+	mongoDBAdminPasswordSPK   StackParameterKey = "MongoDBAdminPassword"
+	replicaShardIndexSPK      StackParameterKey = "ReplicaShardIndex"
 	keyPairNameSPK            StackParameterKey = "KeyPairName"
+	volumeSizeSPK             StackParameterKey = "VolumeSize"
+	volumeTypeSPK             StackParameterKey = "VolumeType"
+	iopsSPK                   StackParameterKey = "Iops"
+	nodeInstanceTypeSPK       StackParameterKey = "NodeInstanceType"
+	vpcIdSPK                  StackParameterKey = "VPC"
 	primaryNodeSubnetIdSPK    StackParameterKey = "PrimaryNodeSubnet"
 	secondary0NodeSubnetIdSPK StackParameterKey = "Secondary0NodeSubnet"
 	secondary1NodeSubnetIdSPK StackParameterKey = "Secondary1NodeSubnet"
-	mongoDBAdminPasswordSPK   StackParameterKey = "MongoDBAdminPassword"
-	vpcIdSPK                  StackParameterKey = "VPC"
-	bastionSecurityGroupIdSPK StackParameterKey = "BastionSecurityGroupID"
 )
 
-func (s Service) CreateStack(
-	id,
-	keyPairName,
-	primaryNodeSubnetId,
-	secondary0NodeSubnetId,
-	secondary1NodeSubnetId,
-	mongoDBAdminPassword,
-	vpcId,
-	bastionSecurityGroupId string,
-) (*awscf.CreateStackOutput, error) {
-	parameters := buildParameters(
-		keyPairName,
-		primaryNodeSubnetId,
-		secondary0NodeSubnetId,
-		secondary1NodeSubnetId,
-		mongoDBAdminPassword,
-		vpcId,
-		bastionSecurityGroupId,
-	)
-	createStackInput := BuildCreateStackInput(id, parameters)
-	return s.Client.CreateStack(&createStackInput)
+type InputParameters struct {
+	MongoDBAdminPassword   string
+	BastionSecurityGroupId string
+	KeyPairName            string
+	VpcId                  string
+	PrimaryNodeSubnetId    string
+	Secondary0NodeSubnetId string
+	Secondary1NodeSubnetId string
+	MongoDBVersion         string
+	ClusterReplicaSetCount string
+	ReplicaShardIndex      string
+	VolumeSize             string
+	VolumeType             string
+	Iops                   string
+	NodeInstanceType       string
 }
 
-func buildParameters(
-	keyPairName,
-	primaryNodeSubnetId,
-	secondary0NodeSubnetId,
-	secondary1NodeSubnetId,
-	mongoDBAdminPassword,
-	vpcId,
-	bastionSecurityGroupId string,
-) []*awscf.Parameter {
-	return []*awscf.Parameter{
-		&awscf.Parameter{
-			ParameterKey:     aws.String(string(keyPairNameSPK)),
-			ParameterValue:   aws.String(keyPairName),
-			UsePreviousValue: aws.Bool(usePreviousValue),
-		},
-		&awscf.Parameter{
-			ParameterKey:     aws.String(string(primaryNodeSubnetIdSPK)),
-			ParameterValue:   aws.String(primaryNodeSubnetId),
-			UsePreviousValue: aws.Bool(usePreviousValue),
-		},
-		&awscf.Parameter{
-			ParameterKey:     aws.String(string(secondary0NodeSubnetIdSPK)),
-			ParameterValue:   aws.String(secondary0NodeSubnetId),
-			UsePreviousValue: aws.Bool(usePreviousValue),
-		},
-		&awscf.Parameter{
-			ParameterKey:     aws.String(string(secondary1NodeSubnetIdSPK)),
-			ParameterValue:   aws.String(secondary1NodeSubnetId),
-			UsePreviousValue: aws.Bool(usePreviousValue),
-		},
-		&awscf.Parameter{
-			ParameterKey:     aws.String(string(mongoDBAdminPasswordSPK)),
-			ParameterValue:   aws.String(mongoDBAdminPassword),
-			UsePreviousValue: aws.Bool(usePreviousValue),
-		},
-		&awscf.Parameter{
-			ParameterKey:     aws.String(string(vpcIdSPK)),
-			ParameterValue:   aws.String(vpcId),
-			UsePreviousValue: aws.Bool(usePreviousValue),
-		},
-		&awscf.Parameter{
-			ParameterKey:     aws.String(string(bastionSecurityGroupIdSPK)),
-			ParameterValue:   aws.String(bastionSecurityGroupId),
-			UsePreviousValue: aws.Bool(usePreviousValue),
-		},
+func (s Service) CreateStack(id string, inputParameters InputParameters) (*awscf.CreateStackOutput, error) {
+	parameters, err := s.BuildParameters(inputParameters)
+	if err != nil {
+		return nil, err
 	}
+	createStackInput := s.BuildCreateStackInput(id, parameters)
+	return s.Client.CreateStack(createStackInput)
 }
 
-func BuildCreateStackInput(id string, parameters []*awscf.Parameter) awscf.CreateStackInput {
-	mongoDBStack := string(templates.MongoDBStack)
-	return awscf.CreateStackInput{
+func (s Service) BuildParameters(p InputParameters) ([]*awscf.Parameter, error) {
+	var parameters []*awscf.Parameter
+
+	parameters = append(parameters, &awscf.Parameter{
+		ParameterKey:     aws.String(string(mongoDBAdminPasswordSPK)),
+		ParameterValue:   aws.String(p.MongoDBAdminPassword),
+		UsePreviousValue: aws.Bool(usePreviousValue),
+	})
+
+	if p.BastionSecurityGroupId == "" {
+		return parameters, errors.New("Error building MongoDB parameters: bastion security group ID is empty")
+	} else {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(bastionSecurityGroupIdSPK)),
+			ParameterValue:   aws.String(p.BastionSecurityGroupId),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
+
+	if p.KeyPairName == "" {
+		return parameters, errors.New("Error building MongoDB parameters: key pair name is empty")
+	} else {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(keyPairNameSPK)),
+			ParameterValue:   aws.String(p.KeyPairName),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
+
+	if p.VpcId == "" {
+		return parameters, errors.New("Error building MongoDB parameters: VPC ID is empty")
+	} else {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(vpcIdSPK)),
+			ParameterValue:   aws.String(p.VpcId),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
+
+	if p.PrimaryNodeSubnetId == "" {
+		return parameters, errors.New("Error building MongoDB parameters: primary node subnet ID is empty")
+	} else {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(primaryNodeSubnetIdSPK)),
+			ParameterValue:   aws.String(p.PrimaryNodeSubnetId),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
+
+	if p.Secondary0NodeSubnetId == "" {
+		return parameters, errors.New("Error building MongoDB parameters: secondary 0 node subnet ID is empty")
+	} else {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(secondary0NodeSubnetIdSPK)),
+			ParameterValue:   aws.String(p.Secondary0NodeSubnetId),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
+
+	if p.Secondary1NodeSubnetId == "" {
+		return parameters, errors.New("Error building MongoDB parameters: secondary 1 node subnet ID is empty")
+	} else {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(secondary1NodeSubnetIdSPK)),
+			ParameterValue:   aws.String(p.Secondary1NodeSubnetId),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
+
+	if p.MongoDBVersion != "" {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(mongoDBVersionSPK)),
+			ParameterValue:   aws.String(p.MongoDBVersion),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
+
+	if p.ClusterReplicaSetCount != "" {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(clusterReplicaSetCountSPK)),
+			ParameterValue:   aws.String(p.ClusterReplicaSetCount),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
+
+	if p.ReplicaShardIndex != "" {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(replicaShardIndexSPK)),
+			ParameterValue:   aws.String(p.ReplicaShardIndex),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
+
+	if p.VolumeSize != "" {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(volumeSizeSPK)),
+			ParameterValue:   aws.String(p.VolumeSize),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
+
+	if p.VolumeType != "" {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(volumeTypeSPK)),
+			ParameterValue:   aws.String(p.VolumeType),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
+
+	if p.Iops != "" {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(iopsSPK)),
+			ParameterValue:   aws.String(p.Iops),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
+
+	if p.NodeInstanceType != "" {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(nodeInstanceTypeSPK)),
+			ParameterValue:   aws.String(p.NodeInstanceType),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
+
+	return parameters, nil
+}
+
+func (s Service) BuildCreateStackInput(id string, parameters []*awscf.Parameter) *awscf.CreateStackInput {
+	stackName := s.GenerateStackName(id)
+	mongoDBStackTemplate := string(templates.MongoDBStack)
+	return &awscf.CreateStackInput{
 		Capabilities:       capabilities,
-		ClientRequestToken: aws.String("create-" + id),
+		ClientRequestToken: aws.String("create-" + stackName),
 		Parameters:         parameters,
-		StackName:          aws.String(id),
-		TemplateBody:       aws.String(mongoDBStack),
-		TimeoutInMinutes:   &timeoutInMinutes,
+		StackName:          aws.String(stackName),
+		TemplateBody:       aws.String(mongoDBStackTemplate),
+		TimeoutInMinutes:   aws.Int64(timeoutInMinutes),
 	}
 }

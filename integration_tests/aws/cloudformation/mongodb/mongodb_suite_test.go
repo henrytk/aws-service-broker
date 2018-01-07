@@ -2,12 +2,10 @@ package mongodb_test
 
 import (
 	"os"
-	"strings"
 
 	"github.com/henrytk/aws-service-broker/aws/cloudformation/mongodb"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	uuid "github.com/satori/go.uuid"
 
 	"testing"
 )
@@ -31,7 +29,6 @@ func TestMongodb(t *testing.T) {
 	BeforeSuite(func() {
 		mongoDBService, err = mongodb.NewService(region)
 		Expect(err).NotTo(HaveOccurred())
-		id = "test" + strings.Replace(uuid.NewV4().String(), "-", "", -1)
 		assertEnvVar(&keyPairName, "ASB_KEY_PAIR")
 		assertEnvVar(&primaryNodeSubnetId, "ASB_PRIMARY_NODE")
 		assertEnvVar(&secondary0NodeSubnetId, "ASB_SECONDARY_0_NODE")
