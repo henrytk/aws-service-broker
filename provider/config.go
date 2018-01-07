@@ -52,39 +52,39 @@ func DecodeConfig(b []byte) (Config, error) {
 		return config, err
 	}
 	if reflect.DeepEqual(config.Catalog, Catalog{}) {
-		return config, errors.New("Error decoding config: no catalog found")
+		return config, errors.New("Config error: no catalog found")
 	}
 	if len(config.Catalog.Services) == 0 {
-		return config, errors.New("Error decoding config: at least one service must be configured")
+		return config, errors.New("Config error: at least one service must be configured")
 	}
 
 	for _, service := range config.Catalog.Services {
 		switch service.Name {
 		case "mongodb":
 			if service.BastionSecurityGroupId == "" {
-				return config, errors.New("Error decoding config: must provide bastion security group ID")
+				return config, errors.New("Config error: must provide bastion security group ID")
 			}
 			if service.KeyPairName == "" {
-				return config, errors.New("Error decoding config: must provide key pair name")
+				return config, errors.New("Config error: must provide key pair name")
 			}
 			if service.VpcId == "" {
-				return config, errors.New("Error decoding config: must provide VPC ID")
+				return config, errors.New("Config error: must provide VPC ID")
 			}
 			if service.PrimaryNodeSubnetId == "" {
-				return config, errors.New("Error decoding config: must provide primary node subnet ID")
+				return config, errors.New("Config error: must provide primary node subnet ID")
 			}
 			if service.Secondary0NodeSubnetId == "" {
-				return config, errors.New("Error decoding config: must provide secondary 0 node subnet ID")
+				return config, errors.New("Config error: must provide secondary 0 node subnet ID")
 			}
 			if service.Secondary1NodeSubnetId == "" {
-				return config, errors.New("Error decoding config: must provide secondary 1 node subnet ID")
+				return config, errors.New("Config error: must provide secondary 1 node subnet ID")
 			}
 		default:
-			return config, errors.New("Error decoding config: service name " + service.Name + " not recognised")
+			return config, errors.New("Config error: service name " + service.Name + " not recognised")
 		}
 
 		if len(service.Plans) == 0 {
-			return config, errors.New("Error decoding config: at least one plan must be configured for service " + service.Name)
+			return config, errors.New("Config error: at least one plan must be configured for service " + service.Name)
 		}
 	}
 

@@ -18,7 +18,7 @@ var _ = Describe("Config", func() {
 		It("returns an error", func() {
 			rawConfig = json.RawMessage(`{}`)
 			_, err := DecodeConfig(rawConfig)
-			Expect(err).To(MatchError("Error decoding config: no catalog found"))
+			Expect(err).To(MatchError("Config error: no catalog found"))
 		})
 	})
 
@@ -32,7 +32,7 @@ var _ = Describe("Config", func() {
 				}
 			`)
 			_, err := DecodeConfig(rawConfig)
-			Expect(err).To(MatchError("Error decoding config: at least one service must be configured"))
+			Expect(err).To(MatchError("Config error: at least one service must be configured"))
 		})
 	})
 
@@ -50,7 +50,7 @@ var _ = Describe("Config", func() {
 				}
 			`)
 			_, err := DecodeConfig(rawConfig)
-			Expect(err).To(MatchError("Error decoding config: service name mangoDB not recognised"))
+			Expect(err).To(MatchError("Config error: service name mangoDB not recognised"))
 		})
 	})
 
@@ -75,7 +75,7 @@ var _ = Describe("Config", func() {
 				}
 			`)
 			_, err := DecodeConfig(rawConfig)
-			Expect(err).To(MatchError("Error decoding config: at least one plan must be configured for service mongodb"))
+			Expect(err).To(MatchError("Config error: at least one plan must be configured for service mongodb"))
 		})
 	})
 
@@ -149,7 +149,7 @@ var _ = Describe("Config", func() {
 				}
 			`)
 			_, err := DecodeConfig(rawConfig)
-			Expect(err).To(MatchError("Error decoding config: must provide bastion security group ID"))
+			Expect(err).To(MatchError("Config error: must provide bastion security group ID"))
 		})
 
 		It("returns an error if key pair name is empty", func() {
@@ -173,7 +173,7 @@ var _ = Describe("Config", func() {
 				}
 			`)
 			_, err := DecodeConfig(rawConfig)
-			Expect(err).To(MatchError("Error decoding config: must provide key pair name"))
+			Expect(err).To(MatchError("Config error: must provide key pair name"))
 		})
 
 		It("returns an error if VPC ID is empty", func() {
@@ -197,7 +197,7 @@ var _ = Describe("Config", func() {
 				}
 			`)
 			_, err := DecodeConfig(rawConfig)
-			Expect(err).To(MatchError("Error decoding config: must provide VPC ID"))
+			Expect(err).To(MatchError("Config error: must provide VPC ID"))
 		})
 
 		It("returns an error if primary node subnet ID is empty", func() {
@@ -221,7 +221,7 @@ var _ = Describe("Config", func() {
 				}
 			`)
 			_, err := DecodeConfig(rawConfig)
-			Expect(err).To(MatchError("Error decoding config: must provide primary node subnet ID"))
+			Expect(err).To(MatchError("Config error: must provide primary node subnet ID"))
 		})
 
 		It("returns an error if secondary node 0 subnet ID is empty", func() {
@@ -245,7 +245,7 @@ var _ = Describe("Config", func() {
 				}
 			`)
 			_, err := DecodeConfig(rawConfig)
-			Expect(err).To(MatchError("Error decoding config: must provide secondary 0 node subnet ID"))
+			Expect(err).To(MatchError("Config error: must provide secondary 0 node subnet ID"))
 		})
 
 		It("returns an error if secondary node 1 subnet ID is empty", func() {
@@ -269,7 +269,7 @@ var _ = Describe("Config", func() {
 				}
 			`)
 			_, err := DecodeConfig(rawConfig)
-			Expect(err).To(MatchError("Error decoding config: must provide secondary 1 node subnet ID"))
+			Expect(err).To(MatchError("Config error: must provide secondary 1 node subnet ID"))
 		})
 	})
 })
