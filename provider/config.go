@@ -50,8 +50,8 @@ type MongoDBPlanParameters struct {
 	NodeInstanceType       string `json:"node_instance_type"`
 }
 
-func DecodeConfig(b []byte) (Config, error) {
-	var config Config
+func DecodeConfig(b []byte) (*Config, error) {
+	var config *Config
 	err := json.Unmarshal(b, &config)
 	if err != nil {
 		return config, err
@@ -97,4 +97,22 @@ func DecodeConfig(b []byte) (Config, error) {
 	}
 
 	return config, nil
+}
+
+func findServiceById(id string, catalog *Catalog) (Service, error) {
+	for _, service := range catalog.Services {
+		if service.ID == id {
+			return service, nil
+		}
+	}
+	return Service{}, errors.New("could not find service with id " + id)
+}
+
+func findPlanById(id string, service Service) (Plan, error) {
+	for _, plan := range service.Plans {
+		if plan.ID == id {
+			return plan, nil
+		}
+	}
+	return Plan{}, errors.New("could not find plan with id " + id)
 }

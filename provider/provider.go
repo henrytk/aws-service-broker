@@ -24,14 +24,24 @@ func NewAWSProvider(rawConfig []byte) (AWSProvider, error) {
 		return AWSProvider{}, err
 	}
 	return AWSProvider{
-		Config:         &config,
+		Config:         config,
 		MongoDBService: mongoDBService,
 	}, nil
 }
 
-func (ap AWSProvider) Provision(context.Context, usbProvider.ProvisionData) (
+func (ap AWSProvider) Provision(ctx context.Context, provisionData usbProvider.ProvisionData) (
 	dashboardURL, operationData string, err error,
 ) {
+	service, err := findServiceById(provisionData.Service.ID, &ap.Config.Catalog)
+	if err != nil {
+		return "", "", errors.New("Error: could not find service ID: " + provisionData.Service.ID)
+	}
+
+	_, err = findPlanById(provisionData.Plan.ID, service)
+	if err != nil {
+		return "", "", errors.New("Error: could not find plan ID: " + provisionData.Plan.ID)
+	}
+
 	return "", "", errors.New("Error: not implemented")
 }
 
