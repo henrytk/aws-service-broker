@@ -23,40 +23,40 @@ var _ = Describe("Mongodb", func() {
 		mongoDBService = Service{Client: fakeCloudFormationAPI}
 	})
 
-	Describe("BuildParameters", func() {
+	Describe("BuildStackTemplateParameters", func() {
 		Describe("Mandatory parameters", func() {
 			It("returns an error if bastion security group ID is empty", func() {
-				_, err := mongoDBService.BuildParameters(InputParameters{"password", "", "keyPairName", "vpcId", "primary",
+				_, err := mongoDBService.BuildStackTemplateParameters(InputParameters{"password", "", "keyPairName", "vpcId", "primary",
 					"secondary0", "secondary1", "", "", "", "", "", "", ""})
 				Expect(err).To(MatchError("Error building MongoDB parameters: bastion security group ID is empty"))
 			})
 
 			It("returns an error if key pair name is empty", func() {
-				_, err := mongoDBService.BuildParameters(InputParameters{"password", "bastion", "", "vpcId", "primary",
+				_, err := mongoDBService.BuildStackTemplateParameters(InputParameters{"password", "bastion", "", "vpcId", "primary",
 					"secondary0", "secondary1", "", "", "", "", "", "", ""})
 				Expect(err).To(MatchError("Error building MongoDB parameters: key pair name is empty"))
 			})
 
 			It("returns an error if VPC ID is empty", func() {
-				_, err := mongoDBService.BuildParameters(InputParameters{"password", "bastion", "keyPairName", "", "primary",
+				_, err := mongoDBService.BuildStackTemplateParameters(InputParameters{"password", "bastion", "keyPairName", "", "primary",
 					"secondary0", "secondary1", "", "", "", "", "", "", ""})
 				Expect(err).To(MatchError("Error building MongoDB parameters: VPC ID is empty"))
 			})
 
 			It("returns an error if primary node subnet ID is empty", func() {
-				_, err := mongoDBService.BuildParameters(InputParameters{"password", "bastion", "keyPairName", "vpcId", "",
+				_, err := mongoDBService.BuildStackTemplateParameters(InputParameters{"password", "bastion", "keyPairName", "vpcId", "",
 					"secondary0", "secondary1", "", "", "", "", "", "", ""})
 				Expect(err).To(MatchError("Error building MongoDB parameters: primary node subnet ID is empty"))
 			})
 
 			It("returns an error if secondary 0 node subnet ID is empty", func() {
-				_, err := mongoDBService.BuildParameters(InputParameters{"password", "bastion", "keyPairName", "vpcId", "primary",
+				_, err := mongoDBService.BuildStackTemplateParameters(InputParameters{"password", "bastion", "keyPairName", "vpcId", "primary",
 					"", "secondary1", "", "", "", "", "", "", ""})
 				Expect(err).To(MatchError("Error building MongoDB parameters: secondary 0 node subnet ID is empty"))
 			})
 
 			It("returns an error if secondary 1 node subnet ID is empty", func() {
-				_, err := mongoDBService.BuildParameters(InputParameters{"password", "bastion", "keyPairName", "vpcId", "primary",
+				_, err := mongoDBService.BuildStackTemplateParameters(InputParameters{"password", "bastion", "keyPairName", "vpcId", "primary",
 					"secondary0", "", "", "", "", "", "", "", ""})
 				Expect(err).To(MatchError("Error building MongoDB parameters: secondary 1 node subnet ID is empty"))
 			})
@@ -64,7 +64,7 @@ var _ = Describe("Mongodb", func() {
 
 		Describe("Parameters with default values", func() {
 			It("Adds all six optional parameters if non-empty", func() {
-				parameters, err := mongoDBService.BuildParameters(InputParameters{"password", "bastion", "keyPairName", "vpcId", "primary",
+				parameters, err := mongoDBService.BuildStackTemplateParameters(InputParameters{"password", "bastion", "keyPairName", "vpcId", "primary",
 					"secondary0", "secondary1", "3.2", "1", "1", "500", "io1", "200", "m4.xlarge"})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(parameters)).To(Equal(14))

@@ -52,7 +52,7 @@ type InputParameters struct {
 }
 
 func (s Service) CreateStack(id string, inputParameters InputParameters) (*awscf.CreateStackOutput, error) {
-	parameters, err := s.BuildParameters(inputParameters)
+	parameters, err := s.BuildStackTemplateParameters(inputParameters)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (s Service) CreateStack(id string, inputParameters InputParameters) (*awscf
 	return s.Client.CreateStack(createStackInput)
 }
 
-func (s Service) BuildParameters(p InputParameters) ([]*awscf.Parameter, error) {
+func (s Service) BuildStackTemplateParameters(p InputParameters) ([]*awscf.Parameter, error) {
 	var parameters []*awscf.Parameter
 
 	parameters = append(parameters, &awscf.Parameter{
