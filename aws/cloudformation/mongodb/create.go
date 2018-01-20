@@ -35,7 +35,6 @@ var (
 )
 
 type InputParameters struct {
-	MongoDBAdminPassword   string
 	BastionSecurityGroupId string
 	KeyPairName            string
 	VpcId                  string
@@ -43,6 +42,8 @@ type InputParameters struct {
 	Secondary0NodeSubnetId string
 	Secondary1NodeSubnetId string
 	MongoDBVersion         string
+	MongoDBAdminUsername   string
+	MongoDBAdminPassword   string
 	ClusterReplicaSetCount string
 	ReplicaShardIndex      string
 	VolumeSize             string
@@ -63,11 +64,15 @@ func (s *Service) CreateStack(id string, inputParameters InputParameters) (*awsc
 func (s *Service) BuildStackTemplateParameters(p InputParameters) ([]*awscf.Parameter, error) {
 	var parameters []*awscf.Parameter
 
-	parameters = append(parameters, &awscf.Parameter{
-		ParameterKey:     aws.String(string(mongoDBAdminPasswordSPK)),
-		ParameterValue:   aws.String(p.MongoDBAdminPassword),
-		UsePreviousValue: aws.Bool(usePreviousValue),
-	})
+	if p.MongoDBAdminPassword == "" {
+		return parameters, errors.New("Error building MongoDB parameters: MongoDB admin password is empty")
+	} else {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(mongoDBAdminPasswordSPK)),
+			ParameterValue:   aws.String(p.MongoDBAdminPassword),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
 
 	if p.BastionSecurityGroupId == "" {
 		return parameters, errors.New("Error building MongoDB parameters: bastion security group ID is empty")
@@ -133,6 +138,14 @@ func (s *Service) BuildStackTemplateParameters(p InputParameters) ([]*awscf.Para
 		parameters = append(parameters, &awscf.Parameter{
 			ParameterKey:     aws.String(string(mongoDBVersionSPK)),
 			ParameterValue:   aws.String(p.MongoDBVersion),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
+
+	if p.MongoDBAdminUsername != "" {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(mongoDBAdminUsernameSPK)),
+			ParameterValue:   aws.String(p.MongoDBAdminUsername),
 			UsePreviousValue: aws.Bool(usePreviousValue),
 		})
 	}

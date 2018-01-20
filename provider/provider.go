@@ -51,26 +51,29 @@ func (ap *AWSProvider) Provision(ctx context.Context, provisionData usbProvider.
 		_, err = ap.MongoDBService.CreateStack(
 			provisionData.InstanceID,
 			mongodb.InputParameters{
-				ap.MongoDBService.GenerateAdminPassword(ap.Config.Secret + provisionData.InstanceID),
-				service.BastionSecurityGroupId,
-				service.KeyPairName,
-				service.VpcId,
-				service.PrimaryNodeSubnetId,
-				service.Secondary0NodeSubnetId,
-				service.Secondary1NodeSubnetId,
-				plan.MongoDBVersion,
-				plan.ClusterReplicaSetCount,
-				plan.ReplicaShardIndex,
-				plan.VolumeSize,
-				plan.VolumeType,
-				plan.Iops,
-				plan.NodeInstanceType,
+				BastionSecurityGroupId: service.BastionSecurityGroupId,
+				KeyPairName:            service.KeyPairName,
+				VpcId:                  service.VpcId,
+				PrimaryNodeSubnetId:    service.PrimaryNodeSubnetId,
+				Secondary0NodeSubnetId: service.Secondary0NodeSubnetId,
+				Secondary1NodeSubnetId: service.Secondary1NodeSubnetId,
+				MongoDBVersion:         plan.MongoDBVersion,
+				MongoDBAdminUsername:   plan.MongoDBAdminUsername,
+				MongoDBAdminPassword: ap.MongoDBService.GenerateAdminPassword(
+					ap.Config.Secret + provisionData.InstanceID,
+				),
+				ClusterReplicaSetCount: plan.ClusterReplicaSetCount,
+				ReplicaShardIndex:      plan.ReplicaShardIndex,
+				VolumeSize:             plan.VolumeSize,
+				VolumeType:             plan.VolumeType,
+				Iops:                   plan.Iops,
+				NodeInstanceType:       plan.NodeInstanceType,
 			},
 		)
 		if err != nil {
 			return "", "", err
 		}
-		return "", "", errors.New("not implemented")
+		return "", "", nil
 	default:
 		return "", "", errors.New("no provider for service name " + service.Name)
 	}

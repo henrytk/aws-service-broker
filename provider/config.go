@@ -44,6 +44,7 @@ type MongoDBServiceParameters struct {
 
 type MongoDBPlanParameters struct {
 	MongoDBVersion         string `json:"mongodb_version"`
+	MongoDBAdminUsername   string `json:"mongodb_admin_username"`
 	ClusterReplicaSetCount string `json:"cluster_replica_set_count"`
 	ReplicaShardIndex      string `json:"replica_shard_index"`
 	VolumeSize             string `json:"volume_size"`
