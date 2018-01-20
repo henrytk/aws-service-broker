@@ -31,8 +31,9 @@ func NewAWSProvider(rawConfig []byte) (*AWSProvider, error) {
 }
 
 type OperationData struct {
-	Type    string `json:"type"`
-	StackId string `json:"stack_id,omitempty"`
+	Type       string `json:"type"`
+	StackId    string `json:"stack_id,omitempty"`
+	InstanceID string `json:"instance_id,omitempty"`
 }
 
 func (ap *AWSProvider) Provision(ctx context.Context, provisionData usbProvider.ProvisionData) (
@@ -88,10 +89,31 @@ func (ap *AWSProvider) Provision(ctx context.Context, provisionData usbProvider.
 	}
 }
 
-func (ap *AWSProvider) Deprovision(context.Context, usbProvider.DeprovisionData) (
+func (ap *AWSProvider) Deprovision(ctx context.Context, deprovisionData usbProvider.DeprovisionData) (
 	operationData string, err error,
 ) {
-	return "", errors.New("Error: not implemented")
+	service, err := findServiceById(deprovisionData.Service.ID, &ap.Config.Catalog)
+	if err != nil {
+		return "", errors.New("could not find service ID: " + deprovisionData.Service.ID)
+	}
+
+	switch service.Name {
+	case "mongodb":
+		err := ap.MongoDBService.DeleteStack(deprovisionData.InstanceID)
+		if err != nil {
+			return "", err
+		}
+		operationDataJSON, err := json.Marshal(OperationData{
+			Type:       "deprovision",
+			InstanceID: deprovisionData.InstanceID,
+		})
+		if err != nil {
+			return "", err
+		}
+		return string(operationDataJSON), nil
+	default:
+		return "", errors.New("no provider for service name " + service.Name)
+	}
 }
 
 func (ap *AWSProvider) Bind(context.Context, usbProvider.BindData) (

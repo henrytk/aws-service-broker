@@ -244,4 +244,60 @@ var _ = Describe("Provider", func() {
 			})
 		})
 	})
+
+	Describe("Deprovision", func() {
+		It("returns an error when it can't find the service", func() {
+			deprovisionData := usbProvider.DeprovisionData{
+				Service: brokerapi.Service{ID: "this-cannot-be-found"},
+			}
+			_, err := awsProvider.Deprovision(context.Background(), deprovisionData)
+			Expect(err).To(MatchError("could not find service ID: this-cannot-be-found"))
+		})
+
+		Describe("Integration with the MongoDBService", func() {
+			It("passes the correct parameters to AWS via the MongoDBService", func() {
+				deprovisionData := usbProvider.DeprovisionData{
+					InstanceID: "deleteme",
+					Service:    brokerapi.Service{ID: "uuid-1"},
+				}
+				fakeCloudFormationAPI.DeleteStackReturns(
+					&awscf.DeleteStackOutput{},
+					nil,
+				)
+				_, err := awsProvider.Deprovision(context.Background(), deprovisionData)
+				Expect(err).NotTo(HaveOccurred())
+
+				expectedStackId := fakeMongoDBService.GenerateStackName(deprovisionData.InstanceID)
+				deleteStackInput := fakeCloudFormationAPI.DeleteStackArgsForCall(0)
+				Expect(deleteStackInput.StackName).To(Equal(aws.String(expectedStackId)))
+			})
+
+			It("returns an error if the AWS call fails", func() {
+				deprovisionData := usbProvider.DeprovisionData{
+					InstanceID: "deleteme",
+					Service:    brokerapi.Service{ID: "uuid-1"},
+				}
+				fakeCloudFormationAPI.DeleteStackReturns(
+					nil,
+					errors.New("some-aws-api-error"),
+				)
+				_, err := awsProvider.Deprovision(context.Background(), deprovisionData)
+				Expect(err).To(MatchError("some-aws-api-error"))
+			})
+
+			It("returns the correct values", func() {
+				deprovisionData := usbProvider.DeprovisionData{
+					InstanceID: "deleteme",
+					Service:    brokerapi.Service{ID: "uuid-1"},
+				}
+				fakeCloudFormationAPI.DeleteStackReturns(
+					&awscf.DeleteStackOutput{},
+					nil,
+				)
+				operationData, err := awsProvider.Deprovision(context.Background(), deprovisionData)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(operationData).To(Equal(`{"type":"deprovision","instance_id":"deleteme"}`))
+			})
+		})
+	})
 })
