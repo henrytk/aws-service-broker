@@ -51,7 +51,7 @@ func (ap AWSProvider) Provision(ctx context.Context, provisionData usbProvider.P
 		_, err = ap.MongoDBService.CreateStack(
 			provisionData.InstanceID,
 			mongodb.InputParameters{
-				ap.MongoDBService.GenerateAdminPassword("irrelevant"),
+				ap.MongoDBService.GenerateAdminPassword(ap.Config.Secret + provisionData.InstanceID),
 				service.BastionSecurityGroupId,
 				service.KeyPairName,
 				service.VpcId,

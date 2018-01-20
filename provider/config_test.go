@@ -17,6 +17,7 @@ var _ = Describe("Config", func() {
 	Context("when there is no Catalog defined", func() {
 		It("returns an error", func() {
 			rawConfig = json.RawMessage(`{
+				"secret": "half-centaur",
 				"aws_config": {"region": "eu-west-1"}
 			}`)
 			_, err := DecodeConfig(rawConfig)
@@ -28,6 +29,7 @@ var _ = Describe("Config", func() {
 		It("returns an error", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"secret": "half-centaur",
 					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": []
@@ -43,6 +45,7 @@ var _ = Describe("Config", func() {
 		It("returns an error", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"secret": "half-centaur",
 					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
@@ -62,6 +65,7 @@ var _ = Describe("Config", func() {
 		It("returns an error", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"secret": "half-centaur",
 					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
@@ -88,6 +92,7 @@ var _ = Describe("Config", func() {
 		It("decodes both catalog data and provider-specific data into one structure", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"secret": "half-centaur",
 					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
@@ -135,9 +140,24 @@ var _ = Describe("Config", func() {
 	})
 
 	Describe("Mandatory parameters", func() {
+		It("returns an error if secret is empty", func() {
+			rawConfig = json.RawMessage(`
+				{
+					"secret": "",
+					"aws_config": {"region": "eu-west-1"},
+					"catalog": {
+						"services": []
+					}
+				}
+			`)
+			_, err := DecodeConfig(rawConfig)
+			Expect(err).To(MatchError("Config error: must provide non-empty secret"))
+		})
+
 		It("returns an error if AWS region is empty", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"secret": "half-centaur",
 					"aws_config": {"region": ""},
 					"catalog": {
 						"services": []
@@ -151,6 +171,7 @@ var _ = Describe("Config", func() {
 		It("returns an error if bastion security group ID is empty", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"secret": "half-centaur",
 					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
@@ -176,6 +197,7 @@ var _ = Describe("Config", func() {
 		It("returns an error if key pair name is empty", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"secret": "half-centaur",
 					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
@@ -201,6 +223,7 @@ var _ = Describe("Config", func() {
 		It("returns an error if VPC ID is empty", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"secret": "half-centaur",
 					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
@@ -226,6 +249,7 @@ var _ = Describe("Config", func() {
 		It("returns an error if primary node subnet ID is empty", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"secret": "half-centaur",
 					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
@@ -251,6 +275,7 @@ var _ = Describe("Config", func() {
 		It("returns an error if secondary node 0 subnet ID is empty", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"secret": "half-centaur",
 					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [
@@ -276,6 +301,7 @@ var _ = Describe("Config", func() {
 		It("returns an error if secondary node 1 subnet ID is empty", func() {
 			rawConfig = json.RawMessage(`
 				{
+					"secret": "half-centaur",
 					"aws_config": {"region": "eu-west-1"},
 					"catalog": {
 						"services": [

@@ -9,6 +9,7 @@ import (
 )
 
 type Config struct {
+	Secret    string    `json:"secret"`
 	AWSConfig AWSConfig `json:"aws_config"`
 	Catalog   Catalog   `json:"catalog"`
 }
@@ -56,6 +57,9 @@ func DecodeConfig(b []byte) (*Config, error) {
 	err := json.Unmarshal(b, &config)
 	if err != nil {
 		return config, err
+	}
+	if config.Secret == "" {
+		return config, errors.New("Config error: must provide non-empty secret")
 	}
 	if config.AWSConfig.Region == "" {
 		return config, errors.New("Config error: must provide AWS region")

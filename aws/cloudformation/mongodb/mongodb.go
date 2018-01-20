@@ -5,7 +5,10 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/henrytk/aws-service-broker/aws/cloudformation"
+	"github.com/henrytk/aws-service-broker/utils"
 )
+
+const adminPasswordMaxLength = 32
 
 type Service struct {
 	Client cloudformationiface.CloudFormationAPI
@@ -22,8 +25,7 @@ func NewService(region string) (Service, error) {
 }
 
 func (s Service) GenerateAdminPassword(input string) string {
-	//TODO: derive password from instance ID and seed
-	return "password"
+	return utils.GetMD5B64(input, adminPasswordMaxLength)
 }
 
 func (s Service) GenerateStackName(input string) string {
