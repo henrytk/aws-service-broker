@@ -2,6 +2,7 @@ package provider_test
 
 import (
 	"context"
+	"errors"
 
 	"github.com/aws/aws-sdk-go/aws"
 	awscf "github.com/aws/aws-sdk-go/service/cloudformation"
@@ -111,6 +112,10 @@ var _ = Describe("Provider", func() {
 					Service: brokerapi.Service{ID: "uuid-1"},
 					Plan:    brokerapi.ServicePlan{ID: "uuid-2"},
 				}
+				fakeCloudFormationAPI.CreateStackReturns(
+					&awscf.CreateStackOutput{StackId: aws.String("id")},
+					nil,
+				)
 				_, _, err := awsProvider.Provision(context.Background(), provisionData)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -208,6 +213,34 @@ var _ = Describe("Provider", func() {
 				}
 				createStackInput := fakeCloudFormationAPI.CreateStackArgsForCall(0)
 				Expect(createStackInput.Parameters).To(Equal(expectedParameters))
+			})
+
+			It("returns an error if the AWS call fails", func() {
+				provisionData := usbProvider.ProvisionData{
+					Service: brokerapi.Service{ID: "uuid-1"},
+					Plan:    brokerapi.ServicePlan{ID: "uuid-2"},
+				}
+				fakeCloudFormationAPI.CreateStackReturns(
+					nil,
+					errors.New("some-aws-api-error"),
+				)
+				_, _, err := awsProvider.Provision(context.Background(), provisionData)
+				Expect(err).To(MatchError("some-aws-api-error"))
+			})
+
+			It("returns the correct values", func() {
+				provisionData := usbProvider.ProvisionData{
+					Service: brokerapi.Service{ID: "uuid-1"},
+					Plan:    brokerapi.ServicePlan{ID: "uuid-2"},
+				}
+				fakeCloudFormationAPI.CreateStackReturns(
+					&awscf.CreateStackOutput{StackId: aws.String("id")},
+					nil,
+				)
+				dashboardURL, operationData, err := awsProvider.Provision(context.Background(), provisionData)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(dashboardURL).To(BeEmpty())
+				Expect(operationData).To(Equal(`{"type":"provision","stack_id":"id"}`))
 			})
 		})
 	})

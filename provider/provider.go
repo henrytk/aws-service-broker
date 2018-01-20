@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/henrytk/aws-service-broker/aws/cloudformation/mongodb"
@@ -30,7 +31,8 @@ func NewAWSProvider(rawConfig []byte) (*AWSProvider, error) {
 }
 
 type OperationData struct {
-	Type string
+	Type    string `json:"type"`
+	StackId string `json:"stack_id,omitempty"`
 }
 
 func (ap *AWSProvider) Provision(ctx context.Context, provisionData usbProvider.ProvisionData) (
@@ -48,7 +50,7 @@ func (ap *AWSProvider) Provision(ctx context.Context, provisionData usbProvider.
 
 	switch service.Name {
 	case "mongodb":
-		_, err = ap.MongoDBService.CreateStack(
+		createStackOutput, err := ap.MongoDBService.CreateStack(
 			provisionData.InstanceID,
 			mongodb.InputParameters{
 				BastionSecurityGroupId: service.BastionSecurityGroupId,
@@ -73,7 +75,14 @@ func (ap *AWSProvider) Provision(ctx context.Context, provisionData usbProvider.
 		if err != nil {
 			return "", "", err
 		}
-		return "", "", nil
+		operationDataJSON, err := json.Marshal(OperationData{
+			Type:    "provision",
+			StackId: *createStackOutput.StackId,
+		})
+		if err != nil {
+			return "", "", err
+		}
+		return "", string(operationDataJSON), nil
 	default:
 		return "", "", errors.New("no provider for service name " + service.Name)
 	}
