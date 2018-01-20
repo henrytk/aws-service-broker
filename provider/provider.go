@@ -32,6 +32,7 @@ func NewAWSProvider(rawConfig []byte) (*AWSProvider, error) {
 
 type OperationData struct {
 	Type       string `json:"type"`
+	Service    string `json:"service"`
 	StackId    string `json:"stack_id,omitempty"`
 	InstanceID string `json:"instance_id,omitempty"`
 }
@@ -78,6 +79,7 @@ func (ap *AWSProvider) Provision(ctx context.Context, provisionData usbProvider.
 		}
 		operationDataJSON, err := json.Marshal(OperationData{
 			Type:    "provision",
+			Service: service.Name,
 			StackId: *createStackOutput.StackId,
 		})
 		if err != nil {
@@ -105,6 +107,7 @@ func (ap *AWSProvider) Deprovision(ctx context.Context, deprovisionData usbProvi
 		}
 		operationDataJSON, err := json.Marshal(OperationData{
 			Type:       "deprovision",
+			Service:    service.Name,
 			InstanceID: deprovisionData.InstanceID,
 		})
 		if err != nil {
@@ -130,8 +133,42 @@ func (ap *AWSProvider) Update(context.Context, usbProvider.UpdateData) (operatio
 	return "", errors.New("Error: not implemented")
 }
 
-func (ap *AWSProvider) LastOperation(context.Context, usbProvider.LastOperationData) (
+func (ap *AWSProvider) LastOperation(ctx context.Context, lastOperationData usbProvider.LastOperationData) (
 	state brokerapi.LastOperationState, description string, err error,
 ) {
-	return brokerapi.LastOperationState(""), "", errors.New("Error: not implemented")
+	var operationData OperationData
+	err = json.Unmarshal([]byte(lastOperationData.OperationData), &operationData)
+	if err != nil {
+		return "", "", err
+	}
+
+	switch operationData.Service {
+	case "mongodb":
+		switch operationData.Type {
+		case "provision":
+			completed, err := ap.MongoDBService.CreateStackCompleted(lastOperationData.InstanceID)
+			if completed {
+				if err == nil {
+					return brokerapi.Succeeded, "provision succeeded", nil
+				} else {
+					return brokerapi.Failed, err.Error(), nil
+				}
+			}
+			return brokerapi.InProgress, "provision in progress", nil
+		case "deprovision":
+			completed, err := ap.MongoDBService.DeleteStackCompleted(lastOperationData.InstanceID)
+			if completed {
+				if err == nil {
+					return brokerapi.Succeeded, "deprovision succeeded", nil
+				} else {
+					return brokerapi.Failed, err.Error(), nil
+				}
+			}
+			return brokerapi.InProgress, "deprovision in progress", nil
+		default:
+			return "", "", errors.New("unknown operation type '" + operationData.Type + "'")
+		}
+	default:
+		return "", "", errors.New("unknown service '" + operationData.Service + "'")
+	}
 }

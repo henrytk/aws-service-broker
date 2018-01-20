@@ -240,7 +240,7 @@ var _ = Describe("Provider", func() {
 				dashboardURL, operationData, err := awsProvider.Provision(context.Background(), provisionData)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(dashboardURL).To(BeEmpty())
-				Expect(operationData).To(Equal(`{"type":"provision","stack_id":"id"}`))
+				Expect(operationData).To(Equal(`{"type":"provision","service":"mongodb","stack_id":"id"}`))
 			})
 		})
 	})
@@ -296,7 +296,192 @@ var _ = Describe("Provider", func() {
 				)
 				operationData, err := awsProvider.Deprovision(context.Background(), deprovisionData)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(operationData).To(Equal(`{"type":"deprovision","instance_id":"deleteme"}`))
+				Expect(operationData).To(Equal(`{"type":"deprovision","service":"mongodb","instance_id":"deleteme"}`))
+			})
+		})
+	})
+
+	Describe("LastOperation", func() {
+		Describe("last operation data unmarshalling", func() {
+			It("returns an error if the last operation type is unrecognised", func() {
+				lastOperationData := usbProvider.LastOperationData{
+					OperationData: `{"type": "restore", "service": "mongodb"}`,
+				}
+				_, _, err := awsProvider.LastOperation(context.Background(), lastOperationData)
+				Expect(err).To(MatchError("unknown operation type 'restore'"))
+			})
+
+			It("returns an error if the last operation service isn't recognised", func() {
+				lastOperationData := usbProvider.LastOperationData{
+					OperationData: `{"type": "provision", "service": "BongoDB"}`,
+				}
+				_, _, err := awsProvider.LastOperation(context.Background(), lastOperationData)
+				Expect(err).To(MatchError("unknown service 'BongoDB'"))
+			})
+		})
+
+		Describe("Service `mongodb`", func() {
+			Describe("provisioning", func() {
+				It("makes the right calls and returns the right data when provision is complete", func() {
+					lastOperationData := usbProvider.LastOperationData{
+						InstanceID:    "id",
+						OperationData: `{"type": "provision", "service": "mongodb", "stack_id": "id"}`,
+					}
+					fakeCloudFormationAPI.DescribeStacksReturns(
+						&awscf.DescribeStacksOutput{
+							Stacks: []*awscf.Stack{
+								&awscf.Stack{
+									StackStatus: aws.String(awscf.StackStatusCreateComplete),
+								},
+							},
+						},
+						nil,
+					)
+					state, description, err := awsProvider.LastOperation(context.Background(), lastOperationData)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(fakeCloudFormationAPI.DescribeStacksCallCount()).To(Equal(1))
+					Expect(fakeCloudFormationAPI.DescribeStacksArgsForCall(0)).To(Equal(
+						&awscf.DescribeStacksInput{
+							StackName: aws.String(fakeMongoDBService.GenerateStackName("id")),
+						},
+					))
+					Expect(state).To(Equal(brokerapi.Succeeded))
+					Expect(description).To(Equal("provision succeeded"))
+				})
+
+				It("returns failure message when provision failed", func() {
+					lastOperationData := usbProvider.LastOperationData{
+						InstanceID:    "id",
+						OperationData: `{"type": "provision", "service": "mongodb", "stack_id": "id"}`,
+					}
+					fakeCloudFormationAPI.DescribeStacksReturns(
+						&awscf.DescribeStacksOutput{
+							Stacks: []*awscf.Stack{
+								&awscf.Stack{
+									StackStatus: aws.String(awscf.StackStatusCreateFailed),
+								},
+							},
+						},
+						nil,
+					)
+					state, description, err := awsProvider.LastOperation(context.Background(), lastOperationData)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(state).To(Equal(brokerapi.Failed))
+					Expect(description).To(Equal("Final state of stack was not CREATE_COMPLETE. Got: CREATE_FAILED. Reason: no reason returned via the API"))
+				})
+
+				It("returns 'in progress' when provision failed", func() {
+					lastOperationData := usbProvider.LastOperationData{
+						InstanceID:    "id",
+						OperationData: `{"type": "provision", "service": "mongodb", "stack_id": "id"}`,
+					}
+					fakeCloudFormationAPI.DescribeStacksReturns(
+						&awscf.DescribeStacksOutput{
+							Stacks: []*awscf.Stack{
+								&awscf.Stack{
+									StackStatus: aws.String(awscf.StackStatusCreateInProgress),
+								},
+							},
+						},
+						nil,
+					)
+					state, description, err := awsProvider.LastOperation(context.Background(), lastOperationData)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(state).To(Equal(brokerapi.InProgress))
+					Expect(description).To(Equal("provision in progress"))
+				})
+			})
+
+			Describe("deprovisioning", func() {
+				Context("the stack can no longer be retrieved from the AWS API", func() {
+					It("makes the right calls and returns the right data when deprovision is complete", func() {
+						lastOperationData := usbProvider.LastOperationData{
+							InstanceID:    "id",
+							OperationData: `{"type": "deprovision", "service": "mongodb", "stack_id": "id"}`,
+						}
+						fakeCloudFormationAPI.DescribeStacksReturns(
+							&awscf.DescribeStacksOutput{},
+							errors.New("Stack with id "+
+								fakeMongoDBService.GenerateStackName(lastOperationData.InstanceID)+
+								" does not exist",
+							),
+						)
+						state, description, err := awsProvider.LastOperation(context.Background(), lastOperationData)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(fakeCloudFormationAPI.DescribeStacksCallCount()).To(Equal(1))
+						Expect(fakeCloudFormationAPI.DescribeStacksArgsForCall(0)).To(Equal(
+							&awscf.DescribeStacksInput{
+								StackName: aws.String(fakeMongoDBService.GenerateStackName("id")),
+							},
+						))
+						Expect(state).To(Equal(brokerapi.Succeeded))
+						Expect(description).To(Equal("deprovision succeeded"))
+					})
+				})
+				Context("the AWS API returns an explicit completion message", func() {
+					It("returns the right data", func() {
+						lastOperationData := usbProvider.LastOperationData{
+							InstanceID:    "id",
+							OperationData: `{"type": "deprovision", "service": "mongodb", "stack_id": "id"}`,
+						}
+						fakeCloudFormationAPI.DescribeStacksReturns(
+							&awscf.DescribeStacksOutput{
+								Stacks: []*awscf.Stack{
+									&awscf.Stack{
+										StackStatus: aws.String(awscf.StackStatusDeleteComplete),
+									},
+								},
+							},
+							nil,
+						)
+						state, description, err := awsProvider.LastOperation(context.Background(), lastOperationData)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(state).To(Equal(brokerapi.Succeeded))
+						Expect(description).To(Equal("deprovision succeeded"))
+					})
+				})
+
+				It("returns failure message when deprovision failed", func() {
+					lastOperationData := usbProvider.LastOperationData{
+						InstanceID:    "id",
+						OperationData: `{"type": "deprovision", "service": "mongodb", "stack_id": "id"}`,
+					}
+					fakeCloudFormationAPI.DescribeStacksReturns(
+						&awscf.DescribeStacksOutput{
+							Stacks: []*awscf.Stack{
+								&awscf.Stack{
+									StackStatus: aws.String(awscf.StackStatusDeleteFailed),
+								},
+							},
+						},
+						nil,
+					)
+					state, description, err := awsProvider.LastOperation(context.Background(), lastOperationData)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(state).To(Equal(brokerapi.Failed))
+					Expect(description).To(Equal("Final state of stack was not DELETE_COMPLETE. Got: DELETE_FAILED. Reason: no reason returned via the API"))
+				})
+
+				It("returns 'in progress' when deprovision failed", func() {
+					lastOperationData := usbProvider.LastOperationData{
+						InstanceID:    "id",
+						OperationData: `{"type": "deprovision", "service": "mongodb", "stack_id": "id"}`,
+					}
+					fakeCloudFormationAPI.DescribeStacksReturns(
+						&awscf.DescribeStacksOutput{
+							Stacks: []*awscf.Stack{
+								&awscf.Stack{
+									StackStatus: aws.String(awscf.StackStatusDeleteInProgress),
+								},
+							},
+						},
+						nil,
+					)
+					state, description, err := awsProvider.LastOperation(context.Background(), lastOperationData)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(state).To(Equal(brokerapi.InProgress))
+					Expect(description).To(Equal("deprovision in progress"))
+				})
 			})
 		})
 	})
