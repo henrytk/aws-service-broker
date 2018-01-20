@@ -8,7 +8,7 @@ import (
 	awscf "github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
-func (s Service) GetStackState(stackName string) (string, string, error) {
+func (s *Service) GetStackState(stackName string) (string, string, error) {
 	describeStacksOutput, err := s.Client.DescribeStacks(&awscf.DescribeStacksInput{
 		StackName: aws.String(stackName),
 	})
@@ -28,7 +28,7 @@ func (s Service) GetStackState(stackName string) (string, string, error) {
 	return *stack.StackStatus, reason, nil
 }
 
-func (s Service) CreateStackCompleted(id string) (bool, error) {
+func (s *Service) CreateStackCompleted(id string) (bool, error) {
 	stackName := s.GenerateStackName(id)
 	state, reason, err := s.GetStackState(stackName)
 	if err != nil {
@@ -43,7 +43,7 @@ func (s Service) CreateStackCompleted(id string) (bool, error) {
 	return false, nil
 }
 
-func (s Service) DeleteStackCompleted(id string) (bool, error) {
+func (s *Service) DeleteStackCompleted(id string) (bool, error) {
 	stackName := s.GenerateStackName(id)
 	state, reason, err := s.GetStackState(stackName)
 	if err != nil {

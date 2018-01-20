@@ -15,12 +15,12 @@ import (
 var _ = Describe("Mongodb", func() {
 	var (
 		fakeCloudFormationAPI *fakes.FakeCloudFormationAPI
-		mongoDBService        Service
+		mongoDBService        *Service
 	)
 
 	BeforeEach(func() {
 		fakeCloudFormationAPI = &fakes.FakeCloudFormationAPI{}
-		mongoDBService = Service{Client: fakeCloudFormationAPI}
+		mongoDBService = &Service{Client: fakeCloudFormationAPI}
 	})
 
 	Describe("BuildStackTemplateParameters", func() {

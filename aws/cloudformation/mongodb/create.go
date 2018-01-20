@@ -51,7 +51,7 @@ type InputParameters struct {
 	NodeInstanceType       string
 }
 
-func (s Service) CreateStack(id string, inputParameters InputParameters) (*awscf.CreateStackOutput, error) {
+func (s *Service) CreateStack(id string, inputParameters InputParameters) (*awscf.CreateStackOutput, error) {
 	parameters, err := s.BuildStackTemplateParameters(inputParameters)
 	if err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func (s Service) CreateStack(id string, inputParameters InputParameters) (*awscf
 	return s.Client.CreateStack(createStackInput)
 }
 
-func (s Service) BuildStackTemplateParameters(p InputParameters) ([]*awscf.Parameter, error) {
+func (s *Service) BuildStackTemplateParameters(p InputParameters) ([]*awscf.Parameter, error) {
 	var parameters []*awscf.Parameter
 
 	parameters = append(parameters, &awscf.Parameter{
@@ -188,7 +188,7 @@ func (s Service) BuildStackTemplateParameters(p InputParameters) ([]*awscf.Param
 	return parameters, nil
 }
 
-func (s Service) BuildCreateStackInput(id string, parameters []*awscf.Parameter) *awscf.CreateStackInput {
+func (s *Service) BuildCreateStackInput(id string, parameters []*awscf.Parameter) *awscf.CreateStackInput {
 	stackName := s.GenerateStackName(id)
 	mongoDBStackTemplate := string(templates.MongoDBStack)
 	return &awscf.CreateStackInput{

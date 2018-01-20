@@ -12,7 +12,7 @@ import (
 
 var (
 	region                 = "eu-west-1"
-	mongoDBService         mongodb.Service
+	mongoDBService         *mongodb.Service
 	err                    error
 	id                     string
 	ok                     bool

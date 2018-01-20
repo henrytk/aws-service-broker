@@ -11,19 +11,19 @@ import (
 
 type AWSProvider struct {
 	Config         *Config
-	MongoDBService mongodb.Service
+	MongoDBService *mongodb.Service
 }
 
-func NewAWSProvider(rawConfig []byte) (AWSProvider, error) {
+func NewAWSProvider(rawConfig []byte) (*AWSProvider, error) {
 	config, err := DecodeConfig(rawConfig)
 	if err != nil {
-		return AWSProvider{}, err
+		return &AWSProvider{}, err
 	}
 	mongoDBService, err := mongodb.NewService(config.AWSConfig.Region)
 	if err != nil {
-		return AWSProvider{}, err
+		return &AWSProvider{}, err
 	}
-	return AWSProvider{
+	return &AWSProvider{
 		Config:         config,
 		MongoDBService: mongoDBService,
 	}, nil
@@ -33,7 +33,7 @@ type OperationData struct {
 	Type string
 }
 
-func (ap AWSProvider) Provision(ctx context.Context, provisionData usbProvider.ProvisionData) (
+func (ap *AWSProvider) Provision(ctx context.Context, provisionData usbProvider.ProvisionData) (
 	dashboardURL string, operationData string, err error,
 ) {
 	service, err := findServiceById(provisionData.Service.ID, &ap.Config.Catalog)
@@ -76,27 +76,27 @@ func (ap AWSProvider) Provision(ctx context.Context, provisionData usbProvider.P
 	}
 }
 
-func (ap AWSProvider) Deprovision(context.Context, usbProvider.DeprovisionData) (
+func (ap *AWSProvider) Deprovision(context.Context, usbProvider.DeprovisionData) (
 	operationData string, err error,
 ) {
 	return "", errors.New("Error: not implemented")
 }
 
-func (ap AWSProvider) Bind(context.Context, usbProvider.BindData) (
+func (ap *AWSProvider) Bind(context.Context, usbProvider.BindData) (
 	binding brokerapi.Binding, err error,
 ) {
 	return brokerapi.Binding{}, errors.New("Error: not implemented")
 }
 
-func (ap AWSProvider) Unbind(context.Context, usbProvider.UnbindData) (err error) {
+func (ap *AWSProvider) Unbind(context.Context, usbProvider.UnbindData) (err error) {
 	return errors.New("Error: not implemented")
 }
 
-func (ap AWSProvider) Update(context.Context, usbProvider.UpdateData) (operationData string, err error) {
+func (ap *AWSProvider) Update(context.Context, usbProvider.UpdateData) (operationData string, err error) {
 	return "", errors.New("Error: not implemented")
 }
 
-func (ap AWSProvider) LastOperation(context.Context, usbProvider.LastOperationData) (
+func (ap *AWSProvider) LastOperation(context.Context, usbProvider.LastOperationData) (
 	state brokerapi.LastOperationState, description string, err error,
 ) {
 	return brokerapi.LastOperationState(""), "", errors.New("Error: not implemented")

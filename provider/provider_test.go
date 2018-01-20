@@ -18,8 +18,8 @@ var _ = Describe("Provider", func() {
 		rawConfig             []byte
 		config                *Config
 		fakeCloudFormationAPI *fakes.FakeCloudFormationAPI
-		fakeMongoDBService    mongodb.Service
-		awsProvider           AWSProvider
+		fakeMongoDBService    *mongodb.Service
+		awsProvider           *AWSProvider
 	)
 
 	BeforeEach(func() {
@@ -67,8 +67,8 @@ var _ = Describe("Provider", func() {
 		config, err = DecodeConfig(rawConfig)
 		Expect(err).NotTo(HaveOccurred())
 		fakeCloudFormationAPI = &fakes.FakeCloudFormationAPI{}
-		fakeMongoDBService = mongodb.Service{Client: fakeCloudFormationAPI}
-		awsProvider = AWSProvider{Config: config, MongoDBService: fakeMongoDBService}
+		fakeMongoDBService = &mongodb.Service{Client: fakeCloudFormationAPI}
+		awsProvider = &AWSProvider{Config: config, MongoDBService: fakeMongoDBService}
 	})
 
 	Describe("Provision", func() {
