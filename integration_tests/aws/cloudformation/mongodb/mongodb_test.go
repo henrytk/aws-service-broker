@@ -6,7 +6,6 @@ import (
 	"github.com/henrytk/aws-service-broker/aws/cloudformation/mongodb"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	uuid "github.com/satori/go.uuid"
 )
 
 var (
@@ -14,12 +13,8 @@ var (
 )
 
 var _ = Describe("Mongodb", func() {
-	var (
-		instanceID string
-	)
 
 	It("Manages the lifecycle of a CloudFormation stack", func() {
-		instanceID = uuid.NewV4().String()
 		By("Creating a stack")
 		_, err := mongoDBService.CreateStack(
 			instanceID,
