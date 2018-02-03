@@ -19,6 +19,9 @@ var _ = Describe("Mongodb", func() {
 	)
 
 	It("Manages the lifecycle of a CloudFormation stack", func() {
+		//		fmt.Println(vpcId)
+		//		fmt.Println(primaryNodeSubnetId)
+		//		Expect(1).To(Equal(1))
 		instanceID = uuid.NewV4().String()
 		By("Creating a stack")
 		_, err := mongoDBService.CreateStack(

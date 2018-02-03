@@ -22,7 +22,7 @@
   * `ASB_PRIMARY_NODE`: Set to `private_subnet_1` from Terraform outputs
   * `ASB_SECONDARY_0_NODE`: Set to `private_subnet_2` from Terraform outputs
   * `ASB_SECONDARY_1_NODE`: Set to `private_subnet_3` from Terraform outputs
-  * `ASB_MONGODB_ADMIN_PASSWORD`: any non-empty value
+  * `ASB_MONGODB_ADMIN_PASSWORD`: at least 8 characters long
   * `ASB_VPC_ID`: Set to `vpc_id` from Terraform outputs
   * `ASB_BASTION_SECURITY_GROUP`: The ID of the security group you created manually.
 * Run the tests:
