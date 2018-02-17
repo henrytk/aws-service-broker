@@ -47,11 +47,15 @@ func (bt BrokerTester) Provision(instanceID string, body RequestBody, async bool
 	)
 }
 
-func (bt BrokerTester) Deprovision(instanceID string, async bool) *httptest.ResponseRecorder {
+func (bt BrokerTester) Deprovision(instanceID, serviceID, planID string, async bool) *httptest.ResponseRecorder {
 	return bt.Delete(
 		"/v2/service_instances/"+instanceID,
 		nil,
-		url.Values{"accepts_incomplete": []string{strconv.FormatBool(async)}},
+		url.Values{
+			"service_id":         []string{serviceID},
+			"plan_id":            []string{planID},
+			"accepts_incomplete": []string{strconv.FormatBool(async)},
+		},
 	)
 }
 
@@ -86,10 +90,20 @@ func (bt BrokerTester) Update(instanceID string, body RequestBody, async bool) *
 	)
 }
 
-func (bt BrokerTester) LastOperation(instanceID string) *httptest.ResponseRecorder {
+func (bt BrokerTester) LastOperation(instanceID, serviceID, planID, operation string) *httptest.ResponseRecorder {
+	urlValues := url.Values{}
+	if serviceID != "" {
+		urlValues.Add("service_id", serviceID)
+	}
+	if planID != "" {
+		urlValues.Add("plan_id", planID)
+	}
+	if operation != "" {
+		urlValues.Add("operation", operation)
+	}
 	return bt.Get(
 		fmt.Sprintf("/v2/service_instances/%s/last_operation", instanceID),
-		url.Values{},
+		urlValues,
 	)
 }
 
