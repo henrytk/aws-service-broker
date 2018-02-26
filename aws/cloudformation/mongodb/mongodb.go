@@ -8,7 +8,7 @@ import (
 	"github.com/henrytk/aws-service-broker/utils"
 )
 
-const adminPasswordMaxLength = 32
+const adminPasswordMaxLength = 64
 
 type Service struct {
 	Client cloudformationiface.CloudFormationAPI
@@ -25,7 +25,7 @@ func NewService(region string) (*Service, error) {
 }
 
 func (s *Service) GenerateAdminPassword(input string) string {
-	return utils.GetMD5B64(input, adminPasswordMaxLength)
+	return utils.GetMD5Hex(input, adminPasswordMaxLength)
 }
 
 func (s *Service) GenerateStackName(input string) string {

@@ -122,7 +122,7 @@ var _ = Describe("Provider", func() {
 				expectedParameters := []*awscf.Parameter{
 					{
 						ParameterKey:     aws.String("MongoDBAdminPassword"),
-						ParameterValue:   aws.String("CLTC1OdLulR4pjQhECf39A=="),
+						ParameterValue:   aws.String("08b4c2d4e74bba5478a634211027f7f4"),
 						ResolvedValue:    nil,
 						UsePreviousValue: aws.Bool(false),
 					},

@@ -2,16 +2,17 @@ package utils
 
 import (
 	"crypto/md5"
-	"encoding/base64"
+	"encoding/hex"
 )
 
-// GetMD5B64 was shamelessly stolen from github.com/alphagov/paas-rds-broker
-func GetMD5B64(text string, maxLength int) string {
+func GetMD5Hex(text string, maxLength int) string {
 	md5 := md5.Sum([]byte(text))
-	encoded := base64.URLEncoding.EncodeToString(md5[:])
-	if len(encoded) > maxLength {
-		return encoded[0:maxLength]
+	md5Hex := make([]byte, hex.EncodedLen(len(md5)))
+	hex.Encode(md5Hex, md5[:])
+
+	if len(md5Hex) > maxLength {
+		return string(md5Hex[0:maxLength])
 	} else {
-		return encoded
+		return string(md5Hex)
 	}
 }
