@@ -1,9 +1,18 @@
 package mongodb
 
 import (
+	"context"
+
 	"github.com/aws/aws-sdk-go/aws"
 	awscf "github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/henrytk/aws-service-broker/aws/cloudformation/templates"
 )
+
+func (s *Service) UpdateStack(ctx context.Context, id string, inputParameters InputParameters) (*awscf.UpdateStackOutput, error) {
+	parameters := s.BuildUpdateStackParameters(inputParameters)
+	updateStackInput := s.BuildUpdateStackInput(id, parameters)
+	return s.Client.UpdateStackWithContext(ctx, updateStackInput)
+}
 
 func (s *Service) BuildUpdateStackParameters(p InputParameters) []*awscf.Parameter {
 	var parameters []*awscf.Parameter
@@ -120,4 +129,16 @@ func updateParameterValue(input string) (*string, *bool) {
 		return nil, aws.Bool(true)
 	}
 	return aws.String(input), aws.Bool(false)
+}
+
+func (s *Service) BuildUpdateStackInput(id string, parameters []*awscf.Parameter) *awscf.UpdateStackInput {
+	stackName := s.GenerateStackName(id)
+	mongoDBStackTemplate := string(templates.MongoDBStack)
+	return &awscf.UpdateStackInput{
+		Capabilities:       capabilities,
+		ClientRequestToken: aws.String("update-" + stackName),
+		Parameters:         parameters,
+		StackName:          aws.String(stackName),
+		TemplateBody:       aws.String(mongoDBStackTemplate),
+	}
 }

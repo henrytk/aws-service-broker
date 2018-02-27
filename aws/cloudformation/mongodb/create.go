@@ -10,7 +10,6 @@ import (
 
 var (
 	timeoutInMinutes int64 = 15
-	capabilities           = []*string{aws.String("CAPABILITY_IAM")}
 )
 
 func (s *Service) CreateStack(id string, inputParameters InputParameters) (*awscf.CreateStackOutput, error) {

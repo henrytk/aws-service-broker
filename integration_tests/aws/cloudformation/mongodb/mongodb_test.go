@@ -1,6 +1,7 @@
 package mongodb_test
 
 import (
+	"context"
 	"time"
 
 	"github.com/henrytk/aws-service-broker/aws/cloudformation/mongodb"
@@ -34,6 +35,24 @@ var _ = Describe("Mongodb", func() {
 		Eventually(
 			func() bool {
 				completed, err := mongoDBService.CreateStackCompleted(instanceID)
+				Expect(err).NotTo(HaveOccurred())
+				return completed
+			},
+			DEFAULT_TIMEOUT,
+			30*time.Second,
+		).Should(BeTrue())
+
+		By("Updating the node instance type")
+		_, err = mongoDBService.UpdateStack(
+			context.Background(),
+			instanceID,
+			mongodb.InputParameters{NodeInstanceType: "m3.large"},
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(
+			func() bool {
+				completed, err := mongoDBService.UpdateStackCompleted(instanceID)
 				Expect(err).NotTo(HaveOccurred())
 				return completed
 			},

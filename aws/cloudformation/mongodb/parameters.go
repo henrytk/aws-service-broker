@@ -1,5 +1,11 @@
 package mongodb
 
+import "github.com/aws/aws-sdk-go/aws"
+
+var (
+	capabilities = []*string{aws.String("CAPABILITY_IAM")}
+)
+
 type StackParameterKey string
 
 var (

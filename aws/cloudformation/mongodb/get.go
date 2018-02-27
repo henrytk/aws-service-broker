@@ -61,6 +61,21 @@ func (s *Service) DeleteStackCompleted(id string) (bool, error) {
 	return false, nil
 }
 
+func (s *Service) UpdateStackCompleted(id string) (bool, error) {
+	stackName := s.GenerateStackName(id)
+	state, reason, err := s.GetStackState(stackName)
+	if err != nil {
+		return false, err
+	}
+
+	if state == awscf.StackStatusUpdateComplete {
+		return true, nil
+	} else if stackStateIsFinal(state) {
+		return true, errors.New("Final state of stack was not " + awscf.StackStatusUpdateComplete + ". Got: " + state + ". Reason: " + reason)
+	}
+	return false, nil
+}
+
 func stackStateIsFinal(state string) bool {
 	switch state {
 	case awscf.StackStatusCreateInProgress:

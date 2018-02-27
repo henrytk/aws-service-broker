@@ -117,11 +117,20 @@ var _ = Describe("Mongodb", func() {
 		})
 	})
 
-	Describe("Stack Creation", func() {
+	Describe("BuildCreateStackInput", func() {
 		It("should build valid input", func() {
 			var parameters []*awscf.Parameter
 			createStackInput := mongoDBService.BuildCreateStackInput("some-unique-id", parameters)
 			err := createStackInput.Validate()
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("BuildUpdateStackInput", func() {
+		It("should build valid input", func() {
+			var parameters []*awscf.Parameter
+			updateStackInput := mongoDBService.BuildUpdateStackInput("some-unique-id", parameters)
+			err := updateStackInput.Validate()
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -344,6 +353,73 @@ var _ = Describe("Mongodb", func() {
 						}, nil,
 					)
 					completed, err := mongoDBService.DeleteStackCompleted("irrelevant")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(completed).To(BeFalse())
+				})
+			})
+		})
+
+		Describe("UpdateStackCompleted", func() {
+			Context("when failing to get stack information", func() {
+				It("returns false with an error", func() {
+					fakeCloudFormationAPI.DescribeStacksReturns(
+						&awscf.DescribeStacksOutput{
+							Stacks: []*awscf.Stack{},
+						}, errors.New("Error calling DescribeStacks"),
+					)
+					completed, err := mongoDBService.UpdateStackCompleted("irrelevant")
+					Expect(err).To(MatchError("Error calling DescribeStacks"))
+					Expect(completed).To(BeFalse())
+				})
+			})
+
+			Context("when stack has been updated successfully", func() {
+				It("returns true with no error", func() {
+					fakeCloudFormationAPI.DescribeStacksReturns(
+						&awscf.DescribeStacksOutput{
+							Stacks: []*awscf.Stack{
+								&awscf.Stack{
+									StackStatus: aws.String(awscf.StackStatusUpdateComplete),
+								},
+							},
+						}, nil,
+					)
+					completed, err := mongoDBService.UpdateStackCompleted("irrelevant")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(completed).To(BeTrue())
+				})
+			})
+
+			Context("when update stack fails", func() {
+				It("returns false and an error", func() {
+					fakeCloudFormationAPI.DescribeStacksReturns(
+						&awscf.DescribeStacksOutput{
+							Stacks: []*awscf.Stack{
+								&awscf.Stack{
+									StackStatus:       aws.String(awscf.StackStatusUpdateRollbackComplete),
+									StackStatusReason: aws.String("something went wrong"),
+								},
+							},
+						}, nil,
+					)
+					completed, err := mongoDBService.UpdateStackCompleted("irrelevant")
+					Expect(err).To(MatchError("Final state of stack was not UPDATE_COMPLETE. Got: UPDATE_ROLLBACK_COMPLETE. Reason: something went wrong"))
+					Expect(completed).To(BeTrue())
+				})
+			})
+
+			Context("when update stack is still in progress", func() {
+				It("returns false and no error", func() {
+					fakeCloudFormationAPI.DescribeStacksReturns(
+						&awscf.DescribeStacksOutput{
+							Stacks: []*awscf.Stack{
+								&awscf.Stack{
+									StackStatus: aws.String(awscf.StackStatusUpdateInProgress),
+								},
+							},
+						}, nil,
+					)
+					completed, err := mongoDBService.UpdateStackCompleted("irrelevant")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(completed).To(BeFalse())
 				})
