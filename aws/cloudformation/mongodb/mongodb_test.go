@@ -23,15 +23,15 @@ var _ = Describe("Mongodb", func() {
 		fakeCloudFormationAPI = &fakes.FakeCloudFormationAPI{}
 		mongoDBService = &Service{Client: fakeCloudFormationAPI}
 		inputParameters = InputParameters{
-			MongoDBAdminPassword:   "password",
 			BastionSecurityGroupId: "bastion",
 			KeyPairName:            "keypairname",
 			VpcId:                  "vpc-id",
 			PrimaryNodeSubnetId:    "primary",
 			Secondary0NodeSubnetId: "secondary0",
 			Secondary1NodeSubnetId: "secondary1",
-			MongoDBVersion:         "3.4",
+			MongoDBAdminPassword:   "password",
 			MongoDBAdminUsername:   "admin",
+			MongoDBVersion:         "3.4",
 			ClusterReplicaSetCount: "1",
 			ReplicaShardIndex:      "0",
 			VolumeSize:             "400",
@@ -41,54 +41,54 @@ var _ = Describe("Mongodb", func() {
 		}
 	})
 
-	Describe("BuildStackTemplateParameters", func() {
+	Describe("BuildCreateStackParameters", func() {
 		Describe("Mandatory parameters", func() {
-			It("returns an error if MongoDB admin password is empty", func() {
-				inputParameters.MongoDBAdminPassword = ""
-				_, err := mongoDBService.BuildStackTemplateParameters(inputParameters)
-				Expect(err).To(MatchError("Error building MongoDB parameters: MongoDB admin password is empty"))
-			})
-
 			It("returns an error if bastion security group ID is empty", func() {
 				inputParameters.BastionSecurityGroupId = ""
-				_, err := mongoDBService.BuildStackTemplateParameters(inputParameters)
+				_, err := mongoDBService.BuildCreateStackParameters(inputParameters)
 				Expect(err).To(MatchError("Error building MongoDB parameters: bastion security group ID is empty"))
 			})
 
 			It("returns an error if key pair name is empty", func() {
 				inputParameters.KeyPairName = ""
-				_, err := mongoDBService.BuildStackTemplateParameters(inputParameters)
+				_, err := mongoDBService.BuildCreateStackParameters(inputParameters)
 				Expect(err).To(MatchError("Error building MongoDB parameters: key pair name is empty"))
 			})
 
 			It("returns an error if VPC ID is empty", func() {
 				inputParameters.VpcId = ""
-				_, err := mongoDBService.BuildStackTemplateParameters(inputParameters)
+				_, err := mongoDBService.BuildCreateStackParameters(inputParameters)
 				Expect(err).To(MatchError("Error building MongoDB parameters: VPC ID is empty"))
 			})
 
 			It("returns an error if primary node subnet ID is empty", func() {
 				inputParameters.PrimaryNodeSubnetId = ""
-				_, err := mongoDBService.BuildStackTemplateParameters(inputParameters)
+				_, err := mongoDBService.BuildCreateStackParameters(inputParameters)
 				Expect(err).To(MatchError("Error building MongoDB parameters: primary node subnet ID is empty"))
 			})
 
 			It("returns an error if secondary 0 node subnet ID is empty", func() {
 				inputParameters.Secondary0NodeSubnetId = ""
-				_, err := mongoDBService.BuildStackTemplateParameters(inputParameters)
+				_, err := mongoDBService.BuildCreateStackParameters(inputParameters)
 				Expect(err).To(MatchError("Error building MongoDB parameters: secondary 0 node subnet ID is empty"))
 			})
 
 			It("returns an error if secondary 1 node subnet ID is empty", func() {
 				inputParameters.Secondary1NodeSubnetId = ""
-				_, err := mongoDBService.BuildStackTemplateParameters(inputParameters)
+				_, err := mongoDBService.BuildCreateStackParameters(inputParameters)
 				Expect(err).To(MatchError("Error building MongoDB parameters: secondary 1 node subnet ID is empty"))
+			})
+
+			It("returns an error if MongoDB admin password is empty", func() {
+				inputParameters.MongoDBAdminPassword = ""
+				_, err := mongoDBService.BuildCreateStackParameters(inputParameters)
+				Expect(err).To(MatchError("Error building MongoDB parameters: MongoDB admin password is empty"))
 			})
 		})
 
 		Describe("Parameters with default values", func() {
 			It("Adds all six optional parameters if non-empty", func() {
-				parameters, err := mongoDBService.BuildStackTemplateParameters(inputParameters)
+				parameters, err := mongoDBService.BuildCreateStackParameters(inputParameters)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(parameters)).To(Equal(15))
 			})

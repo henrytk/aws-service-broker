@@ -13,47 +13,8 @@ var (
 	capabilities           = []*string{aws.String("CAPABILITY_IAM")}
 )
 
-type StackParameterKey string
-
-var (
-	usePreviousValue                            = false
-	bastionSecurityGroupIdSPK StackParameterKey = "BastionSecurityGroupID"
-	clusterReplicaSetCountSPK StackParameterKey = "ClusterReplicaSetCount"
-	mongoDBVersionSPK         StackParameterKey = "MongoDBVersion"
-	mongoDBAdminUsernameSPK   StackParameterKey = "MongoDBAdminUsername"
-	mongoDBAdminPasswordSPK   StackParameterKey = "MongoDBAdminPassword"
-	replicaShardIndexSPK      StackParameterKey = "ReplicaShardIndex"
-	keyPairNameSPK            StackParameterKey = "KeyPairName"
-	volumeSizeSPK             StackParameterKey = "VolumeSize"
-	volumeTypeSPK             StackParameterKey = "VolumeType"
-	iopsSPK                   StackParameterKey = "Iops"
-	nodeInstanceTypeSPK       StackParameterKey = "NodeInstanceType"
-	vpcIdSPK                  StackParameterKey = "VPC"
-	primaryNodeSubnetIdSPK    StackParameterKey = "PrimaryNodeSubnet"
-	secondary0NodeSubnetIdSPK StackParameterKey = "Secondary0NodeSubnet"
-	secondary1NodeSubnetIdSPK StackParameterKey = "Secondary1NodeSubnet"
-)
-
-type InputParameters struct {
-	BastionSecurityGroupId string
-	KeyPairName            string
-	VpcId                  string
-	PrimaryNodeSubnetId    string
-	Secondary0NodeSubnetId string
-	Secondary1NodeSubnetId string
-	MongoDBVersion         string
-	MongoDBAdminUsername   string
-	MongoDBAdminPassword   string
-	ClusterReplicaSetCount string
-	ReplicaShardIndex      string
-	VolumeSize             string
-	VolumeType             string
-	Iops                   string
-	NodeInstanceType       string
-}
-
 func (s *Service) CreateStack(id string, inputParameters InputParameters) (*awscf.CreateStackOutput, error) {
-	parameters, err := s.BuildStackTemplateParameters(inputParameters)
+	parameters, err := s.BuildCreateStackParameters(inputParameters)
 	if err != nil {
 		return nil, err
 	}
@@ -61,18 +22,9 @@ func (s *Service) CreateStack(id string, inputParameters InputParameters) (*awsc
 	return s.Client.CreateStack(createStackInput)
 }
 
-func (s *Service) BuildStackTemplateParameters(p InputParameters) ([]*awscf.Parameter, error) {
+func (s *Service) BuildCreateStackParameters(p InputParameters) ([]*awscf.Parameter, error) {
+	usePreviousValue := false
 	var parameters []*awscf.Parameter
-
-	if p.MongoDBAdminPassword == "" {
-		return parameters, errors.New("Error building MongoDB parameters: MongoDB admin password is empty")
-	} else {
-		parameters = append(parameters, &awscf.Parameter{
-			ParameterKey:     aws.String(string(mongoDBAdminPasswordSPK)),
-			ParameterValue:   aws.String(p.MongoDBAdminPassword),
-			UsePreviousValue: aws.Bool(usePreviousValue),
-		})
-	}
 
 	if p.BastionSecurityGroupId == "" {
 		return parameters, errors.New("Error building MongoDB parameters: bastion security group ID is empty")
@@ -130,6 +82,16 @@ func (s *Service) BuildStackTemplateParameters(p InputParameters) ([]*awscf.Para
 		parameters = append(parameters, &awscf.Parameter{
 			ParameterKey:     aws.String(string(secondary1NodeSubnetIdSPK)),
 			ParameterValue:   aws.String(p.Secondary1NodeSubnetId),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
+
+	if p.MongoDBAdminPassword == "" {
+		return parameters, errors.New("Error building MongoDB parameters: MongoDB admin password is empty")
+	} else {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(mongoDBAdminPasswordSPK)),
+			ParameterValue:   aws.String(p.MongoDBAdminPassword),
 			UsePreviousValue: aws.Bool(usePreviousValue),
 		})
 	}
