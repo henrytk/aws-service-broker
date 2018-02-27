@@ -41,6 +41,28 @@ var _ = Describe("Mongodb", func() {
 		}
 	})
 
+	Describe("BuildUpdateStackParameters", func() {
+		It("creates a parameter for each input field", func() {
+			parameters := mongoDBService.BuildUpdateStackParameters(inputParameters)
+			Expect(len(parameters)).To(Equal(15))
+
+			By("overriding their previous value")
+			for _, v := range parameters {
+				Expect(v.ParameterValue).NotTo(BeNil())
+				Expect(*v.UsePreviousValue).To(BeFalse())
+			}
+		})
+
+		It("uses the previous value when a parameter isn't provided", func() {
+			inputParameters.BastionSecurityGroupId = ""
+			parameters := mongoDBService.BuildUpdateStackParameters(inputParameters)
+			Expect(len(parameters)).To(Equal(15))
+			Expect(*parameters[0].ParameterKey).To(Equal("BastionSecurityGroupID"))
+			Expect(parameters[0].ParameterValue).To(BeNil())
+			Expect(*parameters[0].UsePreviousValue).To(BeTrue())
+		})
+	})
+
 	Describe("BuildCreateStackParameters", func() {
 		Describe("Mandatory parameters", func() {
 			It("returns an error if bastion security group ID is empty", func() {
