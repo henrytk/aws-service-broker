@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -132,9 +134,11 @@ func createInternetGateway(vpcId *string) *string {
 }
 
 func createKeyPair(keyPairName string) {
-	_, err := svc.CreateKeyPair(&ec2.CreateKeyPairInput{
+	createKeyPairOutput, err := svc.CreateKeyPair(&ec2.CreateKeyPairInput{
 		KeyName: aws.String(keyPairName),
 	})
+	Expect(err).NotTo(HaveOccurred())
+	err = ioutil.WriteFile("/tmp/"+keyPairName, []byte(*createKeyPairOutput.KeyMaterial), 0400)
 	Expect(err).NotTo(HaveOccurred())
 }
 
@@ -319,6 +323,8 @@ func deleteKeyPair(keyPairName string) {
 	_, err := svc.DeleteKeyPair(&ec2.DeleteKeyPairInput{
 		KeyName: aws.String(keyPairName),
 	})
+	Expect(err).NotTo(HaveOccurred())
+	err = os.Remove("/tmp/" + keyPairName)
 	Expect(err).NotTo(HaveOccurred())
 }
 
