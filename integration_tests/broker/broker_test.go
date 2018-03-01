@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/henrytk/aws-service-broker/broker"
@@ -16,6 +15,10 @@ import (
 	broker_tester "github.com/henrytk/universal-service-broker/broker/testing"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+)
+
+var (
+	DEFAULT_TIMEOUT time.Duration = 15 * time.Minute
 )
 
 var _ = Describe("Broker", func() {
@@ -35,8 +38,6 @@ var _ = Describe("Broker", func() {
 		plan2ID          string = "plan2ID"
 		organizationGUID string = "orgGUID"
 		spaceGUID        string = "spaceGUID"
-
-		DEFAULT_TIMEOUT time.Duration = 15 * time.Minute
 	)
 
 	BeforeEach(func() {
@@ -55,6 +56,7 @@ var _ = Describe("Broker", func() {
 						"name": "mongodb",
 						"description": "MongoDB clusters via AWS CloudFormation",
 						"bindable": true,
+						"plan_updateable": true,
 						"requires": [],
 						"metadata": {},
 						"bastion_security_group_id": "` + bastionSecurityGroupId + `",
@@ -66,7 +68,7 @@ var _ = Describe("Broker", func() {
 						"plans": [{
 							"id": "` + plan1ID + `",
 							"name": "basic",
-							"description": "No replicas. Disk: 400GB gp2. Instance: m4.large",
+							"description": "No replicas. Disk: 400GB gp2. Instance: m3.large",
 							"metadata": {},
 							"cluster_replica_set_count": "1",
 							"mongodb_version": "3.2",
@@ -75,13 +77,13 @@ var _ = Describe("Broker", func() {
 							"volume_size": "500",
 							"volume_type": "io1",
 							"iops": "300",
-							"node_instance_type": "m4.large"
+							"node_instance_type": "m3.large"
 						},{
 							"id": "` + plan2ID + `",
-							"name": "replica-set-3",
-							"description": "A replica set of 3 instances. Disk: 400GB gp2. Instance: m4.large",
+							"name": "enhanced",
+							"description": "No replicas. Disk: 400GB gp2. Instance: m4.large",
 							"metadata": {},
-							"cluster_replica_set_count": "3",
+							"cluster_replica_set_count": "1",
 							"mongodb_version": "3.2",
 							"mongodb_admin_username": "superadmin",
 							"replica_shard_index": "1",
@@ -114,7 +116,6 @@ var _ = Describe("Broker", func() {
 	Describe("MongoDB", func() {
 		It("should manage the MongoDB cluster lifecycle", func() {
 			By("provisioning an instance")
-
 			res := brokerTester.Provision(
 				instanceID,
 				broker_tester.RequestBody{
@@ -132,37 +133,36 @@ var _ = Describe("Broker", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("reporting status of last operation: provision")
-
-			operationData, err := json.Marshal(provisioningResponse.OperationData)
-			Expect(err).NotTo(HaveOccurred())
-
-			// The brokerapi library treats all operation data as a string,
-			// even when it is JSON. We unquote the string so it is treated
-			// as a JSON object.
-			uOperationData, err := strconv.Unquote(string(operationData))
-			Expect(err).NotTo(HaveOccurred())
-
-			expectedResponse := brokerapi.LastOperationResponse{
+			pollForCompletion(brokerTester, instanceID, provisioningResponse.OperationData, brokerapi.LastOperationResponse{
 				State:       brokerapi.Succeeded,
 				Description: "provision succeeded",
-			}
+			})
 
-			Eventually(
-				func() brokerapi.LastOperationResponse {
-					lastOperationResponse := brokerapi.LastOperationResponse{}
-					res := brokerTester.LastOperation(instanceID, "", "", uOperationData)
-					if res.Code != http.StatusOK {
-						return lastOperationResponse
-					}
-					_ = json.Unmarshal(res.Body.Bytes(), &lastOperationResponse)
-					return lastOperationResponse
+			By("updating the instance")
+			res = brokerTester.Update(
+				instanceID,
+				broker_tester.RequestBody{
+					ServiceID: serviceID,
+					PlanID:    plan1ID,
+					PreviousValues: &broker_tester.RequestBody{
+						PlanID: plan2ID,
+					},
 				},
-				DEFAULT_TIMEOUT,
-				30*time.Second,
-			).Should(Equal(expectedResponse))
+				ASYNC,
+			)
+			Expect(res.Code).To(Equal(http.StatusAccepted))
 
-			By("deprovisioning an instance")
+			updateResponse := brokerapi.UpdateResponse{}
+			err = json.Unmarshal(res.Body.Bytes(), &updateResponse)
+			Expect(err).NotTo(HaveOccurred())
 
+			By("reporting status of last operation: update")
+			pollForCompletion(brokerTester, instanceID, updateResponse.OperationData, brokerapi.LastOperationResponse{
+				State:       brokerapi.Succeeded,
+				Description: "update succeeded",
+			})
+
+			By("deprovisioning the instance")
 			res = brokerTester.Deprovision(instanceID, serviceID, plan1ID, ASYNC)
 			Expect(res.Code).To(Equal(http.StatusAccepted))
 
@@ -171,34 +171,26 @@ var _ = Describe("Broker", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			By("reporting the status of last operation: deprovision")
-
-			operationData, err = json.Marshal(deprovisionResponse.OperationData)
-			Expect(err).NotTo(HaveOccurred())
-
-			// The brokerapi library treats all operation data as a string,
-			// even when it is JSON. We unquote the string so it is treated
-			// as a JSON object.
-			uOperationData, err = strconv.Unquote(string(operationData))
-			Expect(err).NotTo(HaveOccurred())
-
-			expectedResponse = brokerapi.LastOperationResponse{
+			pollForCompletion(brokerTester, instanceID, deprovisionResponse.OperationData, brokerapi.LastOperationResponse{
 				State:       brokerapi.Succeeded,
 				Description: "deprovision succeeded",
-			}
-
-			Eventually(
-				func() brokerapi.LastOperationResponse {
-					lastOperationResponse := brokerapi.LastOperationResponse{}
-					res := brokerTester.LastOperation(instanceID, "", "", uOperationData)
-					if res.Code != http.StatusOK {
-						return lastOperationResponse
-					}
-					_ = json.Unmarshal(res.Body.Bytes(), &lastOperationResponse)
-					return lastOperationResponse
-				},
-				DEFAULT_TIMEOUT,
-				30*time.Second,
-			).Should(Equal(expectedResponse))
+			})
 		})
 	})
 })
+
+func pollForCompletion(bt broker_tester.BrokerTester, instanceID, operationData string, expectedResponse brokerapi.LastOperationResponse) {
+	Eventually(
+		func() brokerapi.LastOperationResponse {
+			lastOperationResponse := brokerapi.LastOperationResponse{}
+			res := bt.LastOperation(instanceID, "", "", operationData)
+			if res.Code != http.StatusOK {
+				return lastOperationResponse
+			}
+			_ = json.Unmarshal(res.Body.Bytes(), &lastOperationResponse)
+			return lastOperationResponse
+		},
+		DEFAULT_TIMEOUT,
+		30*time.Second,
+	).Should(Equal(expectedResponse))
+}

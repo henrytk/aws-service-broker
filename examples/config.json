@@ -12,6 +12,7 @@
                         "name": "mongodb",
                         "description": "MongoDB clusters via AWS CloudFormation",
                         "bindable": true,
+                        "plan_updateable": true,
                         "requires": [],
                         "metadata": {},
                         "bastion_security_group_id": "sg-xxxxxx",
