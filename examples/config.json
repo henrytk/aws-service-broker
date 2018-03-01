@@ -24,15 +24,15 @@
                         "plans": [{
                                 "id": "uuid-2",
                                 "name": "basic",
+                                "description": "No replicas. Disk: 400GB gp2. Instance: m3.large",
+                                "metadata": {},
+                                "node_instance_type": "m3.large"
+                        },{
+                                "id": "uuid-3",
+                                "name": "enhanced",
                                 "description": "No replicas. Disk: 400GB gp2. Instance: m4.large",
                                 "metadata": {},
-                                "cluster_replica_set_count": "1"
-                        },{
-                                "id": "uuid-2",
-                                "name": "replica-set-3",
-                                "description": "A replica set of 3 instances. Disk: 400GB gp2. Instance: m4.large",
-                                "metadata": {},
-                                "cluster_replica_set_count": "3"
+                                "node_instance_type": "m4.large"
                         }]
                 }]
         }
