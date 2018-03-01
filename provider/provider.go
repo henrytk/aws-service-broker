@@ -129,8 +129,49 @@ func (ap *AWSProvider) Unbind(context.Context, usbProvider.UnbindData) (err erro
 	return errors.New("Error: not implemented")
 }
 
-func (ap *AWSProvider) Update(context.Context, usbProvider.UpdateData) (operationData string, err error) {
-	return "", errors.New("Error: not implemented")
+func (ap *AWSProvider) Update(ctx context.Context, updateData usbProvider.UpdateData) (operationData string, err error) {
+	if len(updateData.Details.RawParameters) > 0 {
+		return "", errors.New("update parameters are not supported")
+	}
+
+	service, err := findServiceById(updateData.Service.ID, &ap.Config.Catalog)
+	if err != nil {
+		return "", errors.New("could not find service ID: " + updateData.Service.ID)
+	}
+
+	newPlan, err := findPlanById(updateData.Plan.ID, service)
+	if err != nil {
+		return "", errors.New("could not find plan ID: " + updateData.Plan.ID)
+	}
+
+	currentPlan, err := findPlanById(updateData.Details.PreviousValues.PlanID, service)
+	if err != nil {
+		return "", errors.New("could not find plan ID: " + updateData.Details.PreviousValues.PlanID)
+	}
+
+	if err := validPlanUpdate(currentPlan, newPlan); err != nil {
+		return "", err
+	}
+
+	switch service.Name {
+	case "mongodb":
+		updateParameters := buildMongoDBUpdateParameters(currentPlan, newPlan)
+		updateStackOutput, err := ap.MongoDBService.UpdateStack(ctx, updateData.InstanceID, updateParameters)
+		if err != nil {
+			return "", err
+		}
+		operationDataJSON, err := json.Marshal(OperationData{
+			Type:    "update",
+			Service: service.Name,
+			StackId: *updateStackOutput.StackId,
+		})
+		if err != nil {
+			return "", err
+		}
+		return string(operationDataJSON), nil
+	default:
+		return "", errors.New("no provider for service name " + service.Name)
+	}
 }
 
 func (ap *AWSProvider) LastOperation(ctx context.Context, lastOperationData usbProvider.LastOperationData) (
@@ -165,10 +206,74 @@ func (ap *AWSProvider) LastOperation(ctx context.Context, lastOperationData usbP
 				}
 			}
 			return brokerapi.InProgress, "deprovision in progress", nil
+		case "update":
+			completed, err := ap.MongoDBService.UpdateStackCompleted(lastOperationData.InstanceID)
+			if completed {
+				if err == nil {
+					return brokerapi.Succeeded, "update succeeded", nil
+				} else {
+					return brokerapi.Failed, err.Error(), nil
+				}
+			}
+			return brokerapi.InProgress, "update in progress", nil
 		default:
 			return "", "", errors.New("unknown operation type '" + operationData.Type + "'")
 		}
 	default:
 		return "", "", errors.New("unknown service '" + operationData.Service + "'")
 	}
+}
+
+func validPlanUpdate(currentPlan, newPlan Plan) error {
+	if currentPlan.MongoDBAdminUsername != newPlan.MongoDBAdminUsername {
+		return errors.New("updating MongoDB admin username is not supported")
+	}
+	if currentPlan.MongoDBVersion != newPlan.MongoDBVersion {
+		return errors.New("updating MongoDB version is not supported")
+	}
+	if currentPlan.ClusterReplicaSetCount != newPlan.ClusterReplicaSetCount {
+		return errors.New("updating cluster replica set count is not supported")
+	}
+	if currentPlan.ReplicaShardIndex != newPlan.ReplicaShardIndex {
+		return errors.New("updating replica shard index is not supported")
+	}
+	if currentPlan.VolumeSize != newPlan.VolumeSize {
+		return errors.New("updating volume size is not supported")
+	}
+	if currentPlan.VolumeType != newPlan.VolumeType {
+		return errors.New("updating volume type is not supported")
+	}
+	if currentPlan.Iops != newPlan.Iops {
+		return errors.New("updating IOPS is not supported")
+	}
+	return nil
+}
+
+func buildMongoDBUpdateParameters(currentPlan, newPlan Plan) mongodb.InputParameters {
+	updateParameters := mongodb.InputParameters{}
+	if currentPlan.MongoDBVersion != newPlan.MongoDBVersion {
+		updateParameters.MongoDBVersion = newPlan.MongoDBVersion
+	}
+	if currentPlan.MongoDBAdminUsername != newPlan.MongoDBAdminUsername {
+		updateParameters.MongoDBAdminUsername = newPlan.MongoDBAdminUsername
+	}
+	if currentPlan.ClusterReplicaSetCount != newPlan.ClusterReplicaSetCount {
+		updateParameters.ClusterReplicaSetCount = newPlan.ClusterReplicaSetCount
+	}
+	if currentPlan.ReplicaShardIndex != newPlan.ReplicaShardIndex {
+		updateParameters.ReplicaShardIndex = newPlan.ReplicaShardIndex
+	}
+	if currentPlan.VolumeSize != newPlan.VolumeSize {
+		updateParameters.VolumeSize = newPlan.VolumeSize
+	}
+	if currentPlan.VolumeType != newPlan.VolumeType {
+		updateParameters.VolumeType = newPlan.VolumeType
+	}
+	if currentPlan.Iops != newPlan.Iops {
+		updateParameters.Iops = newPlan.Iops
+	}
+	if currentPlan.NodeInstanceType != newPlan.NodeInstanceType {
+		updateParameters.NodeInstanceType = newPlan.NodeInstanceType
+	}
+	return updateParameters
 }

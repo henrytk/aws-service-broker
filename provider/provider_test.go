@@ -2,6 +2,7 @@ package provider_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -52,6 +53,19 @@ var _ = Describe("Provider", func() {
 						"plans": [{
 							"id": "uuid-2",
 							"name": "basic",
+							"description": "No replicas. Disk: 400GB gp2. Instance: m3.large",
+							"metadata": {},
+							"cluster_replica_set_count": "1",
+							"mongodb_version": "3.2",
+							"mongodb_admin_username": "superadmin",
+							"replica_shard_index": "1",
+							"volume_size": "500",
+							"volume_type": "io1",
+							"iops": "300",
+							"node_instance_type": "m3.large"
+						},{
+							"id": "uuid-3",
+							"name": "enhanced",
 							"description": "No replicas. Disk: 400GB gp2. Instance: m4.large",
 							"metadata": {},
 							"cluster_replica_set_count": "1",
@@ -61,20 +75,7 @@ var _ = Describe("Provider", func() {
 							"volume_size": "500",
 							"volume_type": "io1",
 							"iops": "300",
-							"node_instance_type": "m4.xxlarge"
-						},{
-							"id": "uuid-2",
-							"name": "replica-set-3",
-							"description": "A replica set of 3 instances. Disk: 400GB gp2. Instance: m4.large",
-							"metadata": {},
-							"cluster_replica_set_count": "3",
-							"mongodb_version": "3.2",
-							"mongodb_admin_username": "superadmin",
-							"replica_shard_index": "1",
-							"volume_size": "500",
-							"volume_type": "io1",
-							"iops": "300",
-							"node_instance_type": "m4.xxlarge"
+							"node_instance_type": "m4.large"
 						}]
 					}]
 				}
@@ -121,12 +122,6 @@ var _ = Describe("Provider", func() {
 
 				expectedParameters := []*awscf.Parameter{
 					{
-						ParameterKey:     aws.String("MongoDBAdminPassword"),
-						ParameterValue:   aws.String("08b4c2d4e74bba5478a634211027f7f4"),
-						ResolvedValue:    nil,
-						UsePreviousValue: aws.Bool(false),
-					},
-					{
 						ParameterKey:     aws.String("BastionSecurityGroupID"),
 						ParameterValue:   aws.String("sg-xxxxxx"),
 						ResolvedValue:    nil,
@@ -163,14 +158,20 @@ var _ = Describe("Provider", func() {
 						UsePreviousValue: aws.Bool(false),
 					},
 					{
-						ParameterKey:     aws.String("MongoDBVersion"),
-						ParameterValue:   aws.String("3.2"),
+						ParameterKey:     aws.String("MongoDBAdminPassword"),
+						ParameterValue:   aws.String("08b4c2d4e74bba5478a634211027f7f4"),
 						ResolvedValue:    nil,
 						UsePreviousValue: aws.Bool(false),
 					},
 					{
 						ParameterKey:     aws.String("MongoDBAdminUsername"),
 						ParameterValue:   aws.String("superadmin"),
+						ResolvedValue:    nil,
+						UsePreviousValue: aws.Bool(false),
+					},
+					{
+						ParameterKey:     aws.String("MongoDBVersion"),
+						ParameterValue:   aws.String("3.2"),
 						ResolvedValue:    nil,
 						UsePreviousValue: aws.Bool(false),
 					},
@@ -206,7 +207,7 @@ var _ = Describe("Provider", func() {
 					},
 					{
 						ParameterKey:     aws.String("NodeInstanceType"),
-						ParameterValue:   aws.String("m4.xxlarge"),
+						ParameterValue:   aws.String("m3.large"),
 						ResolvedValue:    nil,
 						UsePreviousValue: aws.Bool(false),
 					},
@@ -297,6 +298,370 @@ var _ = Describe("Provider", func() {
 				operationData, err := awsProvider.Deprovision(context.Background(), deprovisionData)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(operationData).To(Equal(`{"type":"deprovision","service":"mongodb","instance_id":"deleteme"}`))
+			})
+		})
+	})
+
+	Describe("Update", func() {
+		It("errors if update parameters are sent", func() {
+			updateData := usbProvider.UpdateData{
+				Details: brokerapi.UpdateDetails{
+					RawParameters: json.RawMessage(`{"field": "value"}`),
+				},
+			}
+			_, err := awsProvider.Update(context.Background(), updateData)
+			Expect(err).To(MatchError("update parameters are not supported"))
+		})
+
+		It("returns an error when it can't find the service", func() {
+			updateData := usbProvider.UpdateData{
+				Service: brokerapi.Service{ID: "this-cannot-be-found"},
+			}
+			_, err := awsProvider.Update(context.Background(), updateData)
+			Expect(err).To(MatchError("could not find service ID: this-cannot-be-found"))
+		})
+
+		It("returns an error when it can't find the new plan", func() {
+			updateData := usbProvider.UpdateData{
+				Service: brokerapi.Service{ID: "uuid-1"},
+				Plan:    brokerapi.ServicePlan{ID: "this-cannot-be-found"},
+			}
+			_, err := awsProvider.Update(context.Background(), updateData)
+			Expect(err).To(MatchError("could not find plan ID: this-cannot-be-found"))
+		})
+
+		It("returns an error when it can't find the current plan", func() {
+			updateData := usbProvider.UpdateData{
+				Details: brokerapi.UpdateDetails{
+					PreviousValues: brokerapi.PreviousValues{
+						PlanID: "this-cannot-be-found",
+					},
+				},
+				Service: brokerapi.Service{ID: "uuid-1"},
+				Plan:    brokerapi.ServicePlan{ID: "uuid-3"},
+			}
+			_, err := awsProvider.Update(context.Background(), updateData)
+			Expect(err).To(MatchError("could not find plan ID: this-cannot-be-found"))
+		})
+
+		Describe("Plans", func() {
+			var (
+				updateConfig *Config
+			)
+
+			BeforeEach(func() {
+				updateConfig = &Config{
+					Catalog: Catalog{
+						Services: []Service{
+							{
+								Service: brokerapi.Service{ID: "uuid-1", Name: "mongodb"},
+								Plans: []Plan{
+									{
+										ServicePlan:           brokerapi.ServicePlan{ID: "uuid-2"},
+										MongoDBPlanParameters: MongoDBPlanParameters{},
+									},
+									{
+										ServicePlan:           brokerapi.ServicePlan{ID: "uuid-3"},
+										MongoDBPlanParameters: MongoDBPlanParameters{},
+									},
+								},
+							},
+						},
+					},
+				}
+				fakeCloudFormationAPI.UpdateStackWithContextReturns(
+					&awscf.UpdateStackOutput{StackId: aws.String("stack_id")},
+					nil,
+				)
+			})
+
+			It("allows you to update the node instance type", func() {
+				updateConfig.Catalog.Services[0].Plans[0].MongoDBPlanParameters.NodeInstanceType = "m3.large"
+				updateConfig.Catalog.Services[0].Plans[1].MongoDBPlanParameters.NodeInstanceType = "m4.large"
+				awsProvider.Config = updateConfig
+				updateData := usbProvider.UpdateData{
+					Details: brokerapi.UpdateDetails{
+						PreviousValues: brokerapi.PreviousValues{
+							PlanID: "uuid-2",
+						},
+					},
+					Service: brokerapi.Service{ID: "uuid-1"},
+					Plan:    brokerapi.ServicePlan{ID: "uuid-3"},
+				}
+				_, err := awsProvider.Update(context.Background(), updateData)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("doesn't allow you to update the MongoDBAdminUsername", func() {
+				updateConfig.Catalog.Services[0].Plans[0].MongoDBPlanParameters.MongoDBAdminUsername = "admin"
+				updateConfig.Catalog.Services[0].Plans[1].MongoDBPlanParameters.MongoDBAdminUsername = "superadmin"
+				awsProvider.Config = updateConfig
+				updateData := usbProvider.UpdateData{
+					Details: brokerapi.UpdateDetails{
+						PreviousValues: brokerapi.PreviousValues{
+							PlanID: "uuid-2",
+						},
+					},
+					Service: brokerapi.Service{ID: "uuid-1"},
+					Plan:    brokerapi.ServicePlan{ID: "uuid-3"},
+				}
+				_, err := awsProvider.Update(context.Background(), updateData)
+				Expect(err).To(MatchError("updating MongoDB admin username is not supported"))
+			})
+
+			It("doesn't allow you to update the MongoDBVersion", func() {
+				updateConfig.Catalog.Services[0].Plans[0].MongoDBPlanParameters.MongoDBVersion = "3.2"
+				updateConfig.Catalog.Services[0].Plans[1].MongoDBPlanParameters.MongoDBVersion = "3.4"
+				awsProvider.Config = updateConfig
+				updateData := usbProvider.UpdateData{
+					Details: brokerapi.UpdateDetails{
+						PreviousValues: brokerapi.PreviousValues{
+							PlanID: "uuid-2",
+						},
+					},
+					Service: brokerapi.Service{ID: "uuid-1"},
+					Plan:    brokerapi.ServicePlan{ID: "uuid-3"},
+				}
+				_, err := awsProvider.Update(context.Background(), updateData)
+				Expect(err).To(MatchError("updating MongoDB version is not supported"))
+			})
+
+			It("doesn't allow you to update the ClusterReplicaSetCount", func() {
+				updateConfig.Catalog.Services[0].Plans[0].MongoDBPlanParameters.ClusterReplicaSetCount = "1"
+				updateConfig.Catalog.Services[0].Plans[1].MongoDBPlanParameters.ClusterReplicaSetCount = "3"
+				awsProvider.Config = updateConfig
+				updateData := usbProvider.UpdateData{
+					Details: brokerapi.UpdateDetails{
+						PreviousValues: brokerapi.PreviousValues{
+							PlanID: "uuid-2",
+						},
+					},
+					Service: brokerapi.Service{ID: "uuid-1"},
+					Plan:    brokerapi.ServicePlan{ID: "uuid-3"},
+				}
+				_, err := awsProvider.Update(context.Background(), updateData)
+				Expect(err).To(MatchError("updating cluster replica set count is not supported"))
+			})
+
+			It("doesn't allow you to update the ReplicaShardIndex", func() {
+				updateConfig.Catalog.Services[0].Plans[0].MongoDBPlanParameters.ReplicaShardIndex = "0"
+				updateConfig.Catalog.Services[0].Plans[1].MongoDBPlanParameters.ReplicaShardIndex = "1"
+				awsProvider.Config = updateConfig
+				updateData := usbProvider.UpdateData{
+					Details: brokerapi.UpdateDetails{
+						PreviousValues: brokerapi.PreviousValues{
+							PlanID: "uuid-2",
+						},
+					},
+					Service: brokerapi.Service{ID: "uuid-1"},
+					Plan:    brokerapi.ServicePlan{ID: "uuid-3"},
+				}
+				_, err := awsProvider.Update(context.Background(), updateData)
+				Expect(err).To(MatchError("updating replica shard index is not supported"))
+			})
+
+			It("doesn't allow you to update the VolumeSize", func() {
+				updateConfig.Catalog.Services[0].Plans[0].MongoDBPlanParameters.VolumeSize = "400"
+				updateConfig.Catalog.Services[0].Plans[1].MongoDBPlanParameters.VolumeSize = "500"
+				awsProvider.Config = updateConfig
+				updateData := usbProvider.UpdateData{
+					Details: brokerapi.UpdateDetails{
+						PreviousValues: brokerapi.PreviousValues{
+							PlanID: "uuid-2",
+						},
+					},
+					Service: brokerapi.Service{ID: "uuid-1"},
+					Plan:    brokerapi.ServicePlan{ID: "uuid-3"},
+				}
+				_, err := awsProvider.Update(context.Background(), updateData)
+				Expect(err).To(MatchError("updating volume size is not supported"))
+			})
+
+			It("doesn't allow you to update the VolumeType", func() {
+				updateConfig.Catalog.Services[0].Plans[0].MongoDBPlanParameters.VolumeType = "gp2"
+				updateConfig.Catalog.Services[0].Plans[1].MongoDBPlanParameters.VolumeType = "io1"
+				awsProvider.Config = updateConfig
+				updateData := usbProvider.UpdateData{
+					Details: brokerapi.UpdateDetails{
+						PreviousValues: brokerapi.PreviousValues{
+							PlanID: "uuid-2",
+						},
+					},
+					Service: brokerapi.Service{ID: "uuid-1"},
+					Plan:    brokerapi.ServicePlan{ID: "uuid-3"},
+				}
+				_, err := awsProvider.Update(context.Background(), updateData)
+				Expect(err).To(MatchError("updating volume type is not supported"))
+			})
+
+			It("doesn't allow you to update the Iops", func() {
+				updateConfig.Catalog.Services[0].Plans[0].MongoDBPlanParameters.Iops = "100"
+				updateConfig.Catalog.Services[0].Plans[1].MongoDBPlanParameters.Iops = "300"
+				awsProvider.Config = updateConfig
+				updateData := usbProvider.UpdateData{
+					Details: brokerapi.UpdateDetails{
+						PreviousValues: brokerapi.PreviousValues{
+							PlanID: "uuid-2",
+						},
+					},
+					Service: brokerapi.Service{ID: "uuid-1"},
+					Plan:    brokerapi.ServicePlan{ID: "uuid-3"},
+				}
+				_, err := awsProvider.Update(context.Background(), updateData)
+				Expect(err).To(MatchError("updating IOPS is not supported"))
+			})
+		})
+
+		Describe("Integration with the MongoDBService", func() {
+			It("passes the correct parameters to AWS via the MongoDBService", func() {
+				updateData := usbProvider.UpdateData{
+					Details: brokerapi.UpdateDetails{
+						PreviousValues: brokerapi.PreviousValues{
+							PlanID: "uuid-2",
+						},
+					},
+					Service: brokerapi.Service{ID: "uuid-1"},
+					Plan:    brokerapi.ServicePlan{ID: "uuid-3"},
+				}
+				fakeCloudFormationAPI.UpdateStackWithContextReturns(
+					&awscf.UpdateStackOutput{StackId: aws.String("stack_id")},
+					nil,
+				)
+				_, err := awsProvider.Update(context.Background(), updateData)
+				Expect(err).NotTo(HaveOccurred())
+
+				expectedParameters := []*awscf.Parameter{
+					{
+						ParameterKey:     aws.String("BastionSecurityGroupID"),
+						ParameterValue:   nil,
+						ResolvedValue:    nil,
+						UsePreviousValue: aws.Bool(true),
+					},
+					{
+						ParameterKey:     aws.String("KeyPairName"),
+						ParameterValue:   nil,
+						ResolvedValue:    nil,
+						UsePreviousValue: aws.Bool(true),
+					},
+					{
+						ParameterKey:     aws.String("VPC"),
+						ParameterValue:   nil,
+						ResolvedValue:    nil,
+						UsePreviousValue: aws.Bool(true),
+					},
+					{
+						ParameterKey:     aws.String("PrimaryNodeSubnet"),
+						ParameterValue:   nil,
+						ResolvedValue:    nil,
+						UsePreviousValue: aws.Bool(true),
+					},
+					{
+						ParameterKey:     aws.String("Secondary0NodeSubnet"),
+						ParameterValue:   nil,
+						ResolvedValue:    nil,
+						UsePreviousValue: aws.Bool(true),
+					},
+					{
+						ParameterKey:     aws.String("Secondary1NodeSubnet"),
+						ParameterValue:   nil,
+						ResolvedValue:    nil,
+						UsePreviousValue: aws.Bool(true),
+					},
+					{
+						ParameterKey:     aws.String("MongoDBAdminPassword"),
+						ParameterValue:   nil,
+						ResolvedValue:    nil,
+						UsePreviousValue: aws.Bool(true),
+					},
+					{
+						ParameterKey:     aws.String("MongoDBAdminUsername"),
+						ParameterValue:   nil,
+						ResolvedValue:    nil,
+						UsePreviousValue: aws.Bool(true),
+					},
+					{
+						ParameterKey:     aws.String("MongoDBVersion"),
+						ParameterValue:   nil,
+						ResolvedValue:    nil,
+						UsePreviousValue: aws.Bool(true),
+					},
+					{
+						ParameterKey:     aws.String("ClusterReplicaSetCount"),
+						ParameterValue:   nil,
+						ResolvedValue:    nil,
+						UsePreviousValue: aws.Bool(true),
+					},
+					{
+						ParameterKey:     aws.String("ReplicaShardIndex"),
+						ParameterValue:   nil,
+						ResolvedValue:    nil,
+						UsePreviousValue: aws.Bool(true),
+					},
+					{
+						ParameterKey:     aws.String("VolumeSize"),
+						ParameterValue:   nil,
+						ResolvedValue:    nil,
+						UsePreviousValue: aws.Bool(true),
+					},
+					{
+						ParameterKey:     aws.String("VolumeType"),
+						ParameterValue:   nil,
+						ResolvedValue:    nil,
+						UsePreviousValue: aws.Bool(true),
+					},
+					{
+						ParameterKey:     aws.String("Iops"),
+						ParameterValue:   nil,
+						ResolvedValue:    nil,
+						UsePreviousValue: aws.Bool(true),
+					},
+					{
+						ParameterKey:     aws.String("NodeInstanceType"),
+						ParameterValue:   aws.String("m4.large"),
+						ResolvedValue:    nil,
+						UsePreviousValue: aws.Bool(false),
+					},
+				}
+				Expect(fakeCloudFormationAPI.UpdateStackWithContextCallCount()).To(Equal(1))
+				_, updateStackInput, _ := fakeCloudFormationAPI.UpdateStackWithContextArgsForCall(0)
+				Expect(updateStackInput.Parameters).To(Equal(expectedParameters))
+			})
+
+			It("returns an error if the AWS call fails", func() {
+				updateData := usbProvider.UpdateData{
+					Details: brokerapi.UpdateDetails{
+						PreviousValues: brokerapi.PreviousValues{
+							PlanID: "uuid-2",
+						},
+					},
+					Service: brokerapi.Service{ID: "uuid-1"},
+					Plan:    brokerapi.ServicePlan{ID: "uuid-3"},
+				}
+				fakeCloudFormationAPI.UpdateStackWithContextReturns(
+					nil,
+					errors.New("some-aws-api-error"),
+				)
+				_, err := awsProvider.Update(context.Background(), updateData)
+				Expect(err).To(MatchError("some-aws-api-error"))
+			})
+
+			It("returns the correct values", func() {
+				updateData := usbProvider.UpdateData{
+					Details: brokerapi.UpdateDetails{
+						PreviousValues: brokerapi.PreviousValues{
+							PlanID: "uuid-2",
+						},
+					},
+					Service: brokerapi.Service{ID: "uuid-1"},
+					Plan:    brokerapi.ServicePlan{ID: "uuid-3"},
+				}
+				fakeCloudFormationAPI.UpdateStackWithContextReturns(
+					&awscf.UpdateStackOutput{StackId: aws.String("id")},
+					nil,
+				)
+				operationData, err := awsProvider.Update(context.Background(), updateData)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(operationData).To(Equal(`{"type":"update","service":"mongodb","stack_id":"id"}`))
 			})
 		})
 	})
@@ -481,6 +846,77 @@ var _ = Describe("Provider", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(state).To(Equal(brokerapi.InProgress))
 					Expect(description).To(Equal("deprovision in progress"))
+				})
+			})
+
+			Describe("updating", func() {
+				It("makes the right calls and returns the right data when update is complete", func() {
+					lastOperationData := usbProvider.LastOperationData{
+						InstanceID:    "id",
+						OperationData: `{"type": "update", "service": "mongodb", "stack_id": "id"}`,
+					}
+					fakeCloudFormationAPI.DescribeStacksReturns(
+						&awscf.DescribeStacksOutput{
+							Stacks: []*awscf.Stack{
+								&awscf.Stack{
+									StackStatus: aws.String(awscf.StackStatusUpdateComplete),
+								},
+							},
+						},
+						nil,
+					)
+					state, description, err := awsProvider.LastOperation(context.Background(), lastOperationData)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(fakeCloudFormationAPI.DescribeStacksCallCount()).To(Equal(1))
+					Expect(fakeCloudFormationAPI.DescribeStacksArgsForCall(0)).To(Equal(
+						&awscf.DescribeStacksInput{
+							StackName: aws.String(fakeMongoDBService.GenerateStackName("id")),
+						},
+					))
+					Expect(state).To(Equal(brokerapi.Succeeded))
+					Expect(description).To(Equal("update succeeded"))
+				})
+
+				It("returns failure message when update failed", func() {
+					lastOperationData := usbProvider.LastOperationData{
+						InstanceID:    "id",
+						OperationData: `{"type": "update", "service": "mongodb", "stack_id": "id"}`,
+					}
+					fakeCloudFormationAPI.DescribeStacksReturns(
+						&awscf.DescribeStacksOutput{
+							Stacks: []*awscf.Stack{
+								&awscf.Stack{
+									StackStatus: aws.String(awscf.StackStatusUpdateRollbackComplete),
+								},
+							},
+						},
+						nil,
+					)
+					state, description, err := awsProvider.LastOperation(context.Background(), lastOperationData)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(state).To(Equal(brokerapi.Failed))
+					Expect(description).To(Equal("Final state of stack was not UPDATE_COMPLETE. Got: UPDATE_ROLLBACK_COMPLETE. Reason: no reason returned via the API"))
+				})
+
+				It("returns 'in progress' when update failed", func() {
+					lastOperationData := usbProvider.LastOperationData{
+						InstanceID:    "id",
+						OperationData: `{"type": "update", "service": "mongodb", "stack_id": "id"}`,
+					}
+					fakeCloudFormationAPI.DescribeStacksReturns(
+						&awscf.DescribeStacksOutput{
+							Stacks: []*awscf.Stack{
+								&awscf.Stack{
+									StackStatus: aws.String(awscf.StackStatusUpdateInProgress),
+								},
+							},
+						},
+						nil,
+					)
+					state, description, err := awsProvider.LastOperation(context.Background(), lastOperationData)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(state).To(Equal(brokerapi.InProgress))
+					Expect(description).To(Equal("update in progress"))
 				})
 			})
 		})

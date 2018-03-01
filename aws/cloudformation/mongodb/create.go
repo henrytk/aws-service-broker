@@ -95,18 +95,18 @@ func (s *Service) BuildCreateStackParameters(p InputParameters) ([]*awscf.Parame
 		})
 	}
 
-	if p.MongoDBVersion != "" {
-		parameters = append(parameters, &awscf.Parameter{
-			ParameterKey:     aws.String(string(mongoDBVersionSPK)),
-			ParameterValue:   aws.String(p.MongoDBVersion),
-			UsePreviousValue: aws.Bool(usePreviousValue),
-		})
-	}
-
 	if p.MongoDBAdminUsername != "" {
 		parameters = append(parameters, &awscf.Parameter{
 			ParameterKey:     aws.String(string(mongoDBAdminUsernameSPK)),
 			ParameterValue:   aws.String(p.MongoDBAdminUsername),
+			UsePreviousValue: aws.Bool(usePreviousValue),
+		})
+	}
+
+	if p.MongoDBVersion != "" {
+		parameters = append(parameters, &awscf.Parameter{
+			ParameterKey:     aws.String(string(mongoDBVersionSPK)),
+			ParameterValue:   aws.String(p.MongoDBVersion),
 			UsePreviousValue: aws.Bool(usePreviousValue),
 		})
 	}
